@@ -6,3 +6,6 @@ env/
 
 # Python cache
 __pycache__/
+
+# Database files
+*.sqlite3
