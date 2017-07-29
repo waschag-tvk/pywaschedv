@@ -1,0 +1,11 @@
+<form action="{% url 'wasch:check_login' %}" method="post">
+    <div>
+        <label for="login">Login:</label>
+        <input name="login" size="40" value="login" />
+    </div><br/>
+    <div>
+        <label for="pw">Passwort:</label>
+        <input name="pw" type="password" size="40">
+    </div><br/>
+    <input type="submit" value="Einloggen"/>
+</form>
