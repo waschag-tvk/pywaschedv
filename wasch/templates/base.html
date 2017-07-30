@@ -3,8 +3,23 @@
 <head>
   <meta charset="utf-8">
   <title>{% block title %}WaschZoo{% endblock %}</title>
+  {% load bootstrap_themes %}
+  {% bootstrap_styles theme='simplex' type='min.css' %}
 </head>
 <body>
-  {% block content %}<h1>WaschZoo</h1>{% endblock %}
+  <div class="navbar navbar-default">
+    <div class="navbar-header">
+      <a href="{% url 'wasch:index' %}" class="navbar-brand">WaschZoo</a>
+    </div>
+    <div class="navbar-collapse collapse" id="navbar-main">
+      <ul class="nav navbar-nav">
+	<li><a href="{% url 'wasch:stats' %}">Stats</a></li>
+	<li><a href="{% url 'wasch:logout' %}">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>

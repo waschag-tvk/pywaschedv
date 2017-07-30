@@ -1,11 +1,10 @@
 {% extends '../base.html' %}
 {% block title %}WaschZoo Stats{% endblock %}
 {% block content %}
-<h1>Stats</h1>
+<h1 class="page-header">Stats</h1>
 <p>There are
 {{ userscount }} users,
 {{ machinescount }} machines,
 {{ appointmentscount }} appointents
 </p>
-<a href="{% url 'wasch:logout' %}">logout</a>
 {% endblock %}
