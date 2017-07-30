@@ -1,11 +1,12 @@
-<form action="{% url 'wasch:check_login' %}" method="post">
+<form action="{% url 'wasch:login' %}" method="post">
+    {% csrf_token %}
     <div>
-        <label for="login">Login:</label>
-        <input name="login" size="40" value="login" />
+	{{ form.username.label_tag }}
+	{{ form.username }}
     </div><br/>
     <div>
-        <label for="pw">Passwort:</label>
-        <input name="pw" type="password" size="40">
+	{{ form.password.label_tag }}
+	{{ form.password }}
     </div><br/>
     <input type="submit" value="Einloggen"/>
 </form>
