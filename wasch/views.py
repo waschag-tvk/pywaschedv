@@ -74,8 +74,10 @@ class AppointmentsPerDayChart(BaseLineChartView):
     def __init__(self, *args, **kwargs):
         BaseLineChartView.__init__(self, *args, **kwargs)
         end = datetime.date.today()
+        self.steps = 3
+        self.duration = 30
         self.days = [
-            end + datetime.timedelta(days=d) for d in range(-30, 0, 3)]
+            end + datetime.timedelta(days=d) for d in range(-self.duration, 0, self.steps)]
 
     def get_labels(self):
         """Return 10 labels for the x-axis."""
@@ -88,8 +90,8 @@ class AppointmentsPerDayChart(BaseLineChartView):
     def get_data(self):
         """Return 2 datasets to plot."""
         return [
-            [_appointments_per_day(day) for day in self.days],
-            [_appointments_per_day(day, used=True) for day in self.days],
+            [sum(_appointments_per_day(start - datetime.timedelta(days=i)) for i in range(self.steps)) for start in self.days],
+            [sum(_appointments_per_day(start - datetime.timedelta(days=i), used=True) for i in range(self.steps)) for start in self.days],
         ]
 
 
