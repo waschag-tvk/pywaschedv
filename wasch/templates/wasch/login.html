@@ -1,3 +1,7 @@
+{% extends '../base.html' %}
+{% block title %}WaschZoo Login{% endblock %}
+{% block content %}
+<h1>Login</h1>
 <form action="{% url 'wasch:login' %}" method="post">
     {% csrf_token %}
     <div>
@@ -10,3 +14,4 @@
     </div><br/>
     <input type="submit" value="Einloggen"/>
 </form>
+{% endblock %}
