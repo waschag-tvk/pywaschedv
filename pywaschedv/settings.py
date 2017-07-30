@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'bootstrap_themes',
+    'chartjs',
     'wasch.apps.WaschConfig',
 ]
 
