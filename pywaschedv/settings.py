@@ -87,6 +87,13 @@ DATABASES = {
 }
 
 
+AUTHENTICATION_BACKENDS = [
+    'wasch.auth.GodOnlyBackend'
+]
+
+LOGIN_URL = '/wasch/login/'
+LOGIN_REDIRECT_URL = '/wasch/'
+
 # Password validation
 # https://docs.djangoproject.com/en/1.11/ref/settings/#auth-password-validators
 
