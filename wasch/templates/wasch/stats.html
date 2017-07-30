@@ -1,4 +1,5 @@
 {% extends '../base.html' %}
+{% load staticfiles %}
 {% block title %}WaschZoo Stats{% endblock %}
 {% block content %}
 <h1 class="page-header">Stats</h1>
@@ -7,4 +8,25 @@
 {{ machinescount }} machines,
 {{ appointmentscount }} appointents
 </p>
+
+<canvas id="appointments_per_day_chart" width="640" height="320"></canvas>
+<canvas id="appointments_per_floor_chart" width="640" height="320"></canvas>
+
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.10.0.min.js"></script>
+<script type="text/javascript" src="{% static 'js/Chart.min.js' %}"></script>
+<script type="text/javascript">
+    $.get('{% url "wasch:statsapi_appointments_per_day" %}', function(data) {
+	var ctx = $("#appointments_per_day_chart").get(0).getContext("2d");
+	new Chart(ctx, {
+	    type: 'line', data: data
+	});
+    });
+
+    $.get('{% url "wasch:statsapi_appointments_per_floor" %}', function(data) {
+	var ctx = $("#appointments_per_floor_chart").get(0).getContext("2d");
+	new Chart(ctx, {
+	    type: 'line', data: data
+	});
+    });
+</script>
 {% endblock %}
