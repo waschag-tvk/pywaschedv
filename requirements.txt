@@ -3,3 +3,4 @@ django-treebeard
 djangorestframework
 PyMySQL
 peewee
+django-bootstrap-themes
