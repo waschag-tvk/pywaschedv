@@ -26,11 +26,12 @@ SECRET_KEY = 'd+r&ba152i70%fr&o&x*ej^y7h-&5!#dyufzm57@&l%0k%w-0@'
 DEBUG = True
 
 ALLOWED_HOSTS = [
-        'localhost',
-        '137.226.142.35',
-        '137.226.142.9',
-        'waschag.tvk.rwth-aachen.de',
-        ]
+    '127.0.0.1',
+    'localhost',
+    '137.226.142.35',
+    '137.226.142.9',
+    'waschag.tvk.rwth-aachen.de',
+    ]
 
 
 # Application definition

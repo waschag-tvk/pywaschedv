@@ -1,5 +1,6 @@
 import datetime
 from django.shortcuts import render
+from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
@@ -10,10 +11,12 @@ from legacymodels import Users, Termine, Waschmaschinen
 
 def index_view(request):
     """Returns the index view page."""
-    if request.user.is_authenticated:
-        return HttpResponseRedirect('/wasch/stats/')
-    else:
-        return render(request, 'wasch/index.html')
+    return render(request, 'wasch/index.html')
+
+
+def welcome_view(request):
+    """Returns the welcome page."""
+    return render(request, 'wasch/welcome.html')
 
 
 def check_login_view(request):
@@ -26,6 +29,7 @@ def check_login_view(request):
         return HttpResponse('this is a test response')
     else:
         return HttpResponse('unauthorized', status=401)
+
 
 @login_required
 def stats(request):
