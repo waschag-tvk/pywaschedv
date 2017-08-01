@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from chartjs.views.lines import BaseLineChartView
 from legacymodels import Users, Termine, Waschmaschinen
+from peewee import OperationalError
 
 
 def index_view(request):
@@ -31,7 +32,19 @@ def check_login_view(request):
         return HttpResponse('unauthorized', status=401)
 
 
+def legacy_method(
+        method, retval=HttpResponse('Legacy feature unavailable', status=500)):
+    def quiet_method(*args, **kwargs):
+        try:
+            method(*args, **kwargs)
+        except OperationalError:
+            print('legacy_method got OperationalError')
+            return retval
+    return quiet_method
+
+
 @login_required
+@legacy_method
 def stats(request):
     """Show usage stats"""
     users = Users.select(Users.login).execute()
