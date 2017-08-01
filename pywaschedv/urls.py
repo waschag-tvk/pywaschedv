@@ -18,6 +18,7 @@ from django.contrib import admin
 from wasch import views as waschviews
 
 urlpatterns = [
+    url(r'^$', waschviews.welcome_view),
     url(r'^admin/', admin.site.urls),
     url(r'^wasch/', include('wasch.urls', namespace='wasch'))
 ]
