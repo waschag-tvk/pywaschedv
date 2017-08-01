@@ -91,7 +91,8 @@ DATABASES = {
 
 
 AUTHENTICATION_BACKENDS = [
-    'wasch.auth.GodOnlyBackend'
+    'wasch.auth.GodOnlyBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 LOGIN_URL = '/wasch/login/'
