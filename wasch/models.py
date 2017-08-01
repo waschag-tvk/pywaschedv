@@ -1,13 +1,26 @@
 from django.db import models
+from django.conf import settings
+
+STATUS_CHOICES = (
+    (1, 'enduser'),
+    (3, 'exWaschag'),
+    (5, 'waschag'),
+    (7, 'admin'),
+    (9, 'god'),
+)
 
 
-class Users(models.Model):
-    username = models.TextField()
+class WashUser(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
     isActivated = models.BooleanField()
-    status = models.SmallIntegerField()
+    status = models.SmallIntegerField(choices=STATUS_CHOICES)
 
     class Meta:
-        db_table = 'users'
+        db_table = 'washuser'
 
 
 class WashingMachines(models.Model):
@@ -21,7 +34,7 @@ class WashingMachines(models.Model):
 
 class Appointments(models.Model):
     time = models.DateTimeField()
-    user = models.ForeignKey(Users)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL)
     machine = models.ForeignKey(WashingMachines)
     isBonus = models.BooleanField()
     wasUsed = models.BooleanField()
