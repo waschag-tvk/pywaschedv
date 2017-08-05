@@ -1,3 +1,6 @@
+import struct
+import operator
+from functools import reduce
 from django.db import models
 from django.conf import settings
 from django.core import exceptions
@@ -92,9 +95,22 @@ class Appointment(models.Model):
     transactions = models.ManyToManyField(Transaction)
     wasUsed = models.BooleanField()
     manager = AppointmentManager()
+    reference = models.PositiveIntegerField()  # 0 to 2**31-1
 
     class Meta:
         db_table = 'appointments'
+
+
+def ref_checksum(ref_partial, sup=8):
+    return reduce(operator.xor, struct.pack('I', ref_partial)) % sup
+
+
+def new_appointment(time, user, machine):
+    timestamp = time.timestamp()
+    reference = (timestamp << 2) + machine.number
+    reference = (reference << 3) + ref_checksum(reference)
+    return Appointment(
+            time=time, user=user, machine=machine, reference=reference)
 
 
 class WashParameters(models.Model):
