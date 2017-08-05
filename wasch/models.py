@@ -63,12 +63,33 @@ class AppointmentManager(models.Manager):
         # TODO: finish writing
 
 
+class Transaction(models.Model):
+    '''to be considered atomic, so use only for one appointment
+    (partial refunds wouldn't be needed!)
+    '''
+    fromUser = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            related_name='outgoing_transaction',
+            )
+    toUser = models.ForeignKey(
+            settings.AUTH_USER_MODEL,
+            related_name='incoming_transaction',
+            )
+    value = models.PositiveIntegerField()
+    isBonus = models.BooleanField(default=False)
+    notes = models.CharField(max_length=159)
+
+    class Meta:
+        db_table = 'transaction'
+
+
 class Appointment(models.Model):
 
     time = models.DateTimeField()
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     machine = models.ForeignKey(WashingMachine)
-    isBonus = models.BooleanField()
+    # multiple transactions if bonus portion, refunds etc. exist
+    transactions = models.ManyToManyField(Transaction)
     wasUsed = models.BooleanField()
     manager = AppointmentManager()
 
