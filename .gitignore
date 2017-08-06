@@ -1,6 +1,9 @@
 # PyCharm files
 .idea/
 
+# Vim files
+*.swp
+
 # Python Virtual Environments
 env/
 
@@ -9,3 +12,4 @@ __pycache__/
 
 # Database files
 *.sqlite3
+migrations/
