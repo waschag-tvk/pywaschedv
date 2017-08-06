@@ -94,6 +94,7 @@ class Appointment(models.Model):
     # multiple transactions if bonus portion, refunds etc. exist
     transactions = models.ManyToManyField(Transaction)
     wasUsed = models.BooleanField()
+    objects = models.Manager()
     manager = AppointmentManager()
     reference = models.PositiveIntegerField()  # 0 to 2**31-1
 
