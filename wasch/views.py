@@ -36,7 +36,7 @@ def legacy_method(
         method, retval=HttpResponse('Legacy feature unavailable', status=500)):
     def quiet_method(*args, **kwargs):
         try:
-            method(*args, **kwargs)
+            return method(*args, **kwargs)
         except OperationalError:
             print('legacy_method got OperationalError')
             return retval
