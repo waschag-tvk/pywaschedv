@@ -4,6 +4,7 @@ from functools import reduce
 from django.db import models
 from django.conf import settings
 from django.core import exceptions
+from django.contrib import admin
 
 
 STATUS_CHOICES = (
@@ -31,12 +32,20 @@ class WashUser(models.Model):
 
 class WashingMachine(models.Model):
 
-    number = models.SmallIntegerField(unique=True)
+    number = models.SmallIntegerField(primary_key=True)
     isAvailable = models.BooleanField()
     notes = models.CharField(max_length=500)
 
+    def __str__(self):
+        return 'Washing Machine {:d}'.format(self.number)
+
     class Meta:
         db_table = 'washingmachines'
+
+
+@admin.register(WashingMachine)
+class WashingMachineAdmin(admin.ModelAdmin):
+    pass
 
 
 class AppointmentManager(models.Manager):
