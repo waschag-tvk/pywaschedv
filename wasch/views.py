@@ -6,8 +6,10 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from chartjs.views.lines import BaseLineChartView
+import django_tables2
 from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
+from wasch.models import WashingMachine
 
 
 def index_view(request):
@@ -56,6 +58,23 @@ def stats(request):
         'appointmentscount': len(appointents),
     }
     return render(request, 'wasch/stats.html', context)
+
+
+class WashingMachineTable(django_tables2.Table):
+    class Meta:
+        model = WashingMachine
+        template = 'django_tables2/bootstrap.html'
+
+
+@login_required
+def status(request):
+    """Show service status"""
+    machines = WashingMachineTable(WashingMachine.objects.all())
+    django_tables2.RequestConfig(request).configure(machines)
+    context = {
+        'machines_table': machines,
+    }
+    return render(request, 'wasch/status.html', context)
 
 
 def _appointments_per_day(day, used=None):
