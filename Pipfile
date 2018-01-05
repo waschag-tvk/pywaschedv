@@ -17,6 +17,7 @@ djangorestframework = "*"
 peewee = "*"
 pymysql = "*"
 django = "==1.11"
+"django-tables2" = "*"
 
 
 [requires]
