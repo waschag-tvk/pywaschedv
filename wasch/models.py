@@ -33,7 +33,7 @@ class WashUser(models.Model):
 class WashingMachine(models.Model):
 
     number = models.SmallIntegerField(primary_key=True)
-    isAvailable = models.BooleanField()
+    isAvailable = models.BooleanField(verbose_name='available')
     notes = models.CharField(max_length=500)
 
     def __str__(self):
