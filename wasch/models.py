@@ -51,17 +51,13 @@ class WashingMachineAdmin(admin.ModelAdmin):
 class AppointmentManager(models.Manager):
     """Manages table-wide operations."""
 
-    def appointment_exists(self, time, machine_number):
+    def appointment_exists(self, time, machine):
         """Returns True if an appointment has been booked at this time, and False if the appointment time is free."""
 
-        # search for appointments at this time for this machine number
-        machine = WashingMachine.objects.get(number=machine_number)
-        appointment_qs = self.filter(time=time).filter(machine=machine.id)
+        # search for appointments at this time for this machine
+        appointment_qs = self.filter(time=time).filter(machine=machine)
 
-        if len(appointment_qs) != 0:
-            return False
-        else:
-            return True
+        return len(appointment_qs) != 0
 
         # TODO: add logic to determine missing washing machine entries, input checks etc.
         # raise NotImplementedError
