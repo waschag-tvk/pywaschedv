@@ -1,4 +1,5 @@
 import datetime
+import math
 from django.shortcuts import render
 from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -9,7 +10,7 @@ from chartjs.views.lines import BaseLineChartView
 import django_tables2
 from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
-from wasch.models import WashingMachine
+from wasch.models import WashingMachine, Appointment, WashUser
 
 
 def index_view(request):
@@ -75,6 +76,77 @@ def status(request):
         'machines_table': machines,
     }
     return render(request, 'wasch/status.html', context)
+
+
+def bookable(time, machine, user):
+    try:
+        return (
+            (not Appointment.manager.appointment_exists(time, machine))
+            and machine.isAvailable
+            and user.groups.filter(name='enduser').exists()
+            and WashUser.objects.get(pk=user).isActivated
+        )
+    except WashUser.DoesNotExist:
+        return False
+
+
+APPOINTMENT_ATTR_TEMPLATE = 'appointment_m{:d}'
+
+
+# columns won't be generated this way
+# def machine_columns(cls):
+    # for machine in WashingMachine.objects.filter(isAvailable=True):
+        # setattr(
+            # cls, APPOINTMENT_ATTR_TEMPLATE.format(machine.number),
+            # django_tables2.Column(),
+        # )
+    # return cls
+
+
+# @machine_columns
+class AppointmentTable(django_tables2.Table):
+    time = django_tables2.Column()
+    appointment_m1 = django_tables2.Column()
+    appointment_m2 = django_tables2.Column()
+    appointment_m3 = django_tables2.Column()
+
+    class Meta:
+        template = 'django_tables2/bootstrap.html'
+
+
+def _appointment_table_row(time, user):
+    row = {
+        'time': time.isoformat(),
+    }
+    for machine in WashingMachine.objects.filter(isAvailable=True):
+        row[APPOINTMENT_ATTR_TEMPLATE.format(machine.number)] = (
+            'coming soon' if bookable(
+                time=time, machine=machine, user=user,
+            ) else None
+        )
+    return row
+
+
+@login_required
+def book(request):
+    """Offer appointments for booking"""
+    appointments_per_day = 16
+    appointments_number = appointments_per_day * 7  # week
+    interval_minutes = 24 * 60 // appointments_per_day
+    now = datetime.datetime.now()
+    next_appointment_number = math.ceil(
+        float(60 * now.hour + now.minute) / interval_minutes)
+    begin = datetime.datetime(now.year, now.month, now.day)
+    begin += datetime.timedelta(
+        minutes=next_appointment_number*interval_minutes)
+    table = AppointmentTable([_appointment_table_row(
+        begin + datetime.timedelta(minutes=i*interval_minutes),
+        request.user,
+    ) for i in range(appointments_number)])
+    context = {
+        'appointments_table': table,
+    }
+    return render(request, 'wasch/book.html', context)
 
 
 def _appointments_per_day(day, used=None):
