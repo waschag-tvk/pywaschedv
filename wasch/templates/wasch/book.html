@@ -1,0 +1,10 @@
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}WaschZoo Booking{% endblock %}
+{% block content %}
+<h1 class="page-header">Booking</h1>
+<h2>Laundry appointments</h2>
+
+{% load django_tables2 %}
+{% render_table appointments_table %}
+{% endblock %}
