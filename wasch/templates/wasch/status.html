@@ -1,0 +1,10 @@
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}WaschZoo Status{% endblock %}
+{% block content %}
+<h1 class="page-header">Status</h1>
+<h2>Washing machines</h2>
+
+{% load django_tables2 %}
+{% render_table machines_table %}
+{% endblock %}
