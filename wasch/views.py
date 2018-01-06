@@ -4,13 +4,18 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_http_methods
+from django.utils.html import format_html
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout as auth_logout
+from django.utils.six import BytesIO
+from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 from chartjs.views.lines import BaseLineChartView
 import django_tables2
 from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
 from wasch.models import WashingMachine, Appointment, WashUser
+from wasch.serializers import AppointmentSerializer
 
 
 def index_view(request):
@@ -93,6 +98,24 @@ def bookable(time, machine, user):
 APPOINTMENT_ATTR_TEMPLATE = 'appointment_m{:d}'
 
 
+class AppointmentColumn(django_tables2.Column):
+    def render(self, value):
+        """
+        :param value tuple: time, machine, user
+        """
+        time, machine, user = value
+        if bookable(time=time, machine=machine, user=user):
+            appointment = Appointment(time=time, user=user, machine=machine)
+            appointment_serial = AppointmentSerializer(appointment)
+            apjson = JSONRenderer().render(appointment_serial.data)
+            book_link = reverse('wasch:do_book', args=[apjson])
+            return format_html(
+                '<a href="{}">You can book m{} soon!</a>',
+                book_link, machine.number)
+        else:
+            return 'Not available'
+
+
 # columns won't be generated this way
 # def machine_columns(cls):
     # for machine in WashingMachine.objects.filter(isAvailable=True):
@@ -106,9 +129,9 @@ APPOINTMENT_ATTR_TEMPLATE = 'appointment_m{:d}'
 # @machine_columns
 class AppointmentTable(django_tables2.Table):
     time = django_tables2.Column()
-    appointment_m1 = django_tables2.Column()
-    appointment_m2 = django_tables2.Column()
-    appointment_m3 = django_tables2.Column()
+    appointment_m1 = AppointmentColumn()
+    appointment_m2 = AppointmentColumn()
+    appointment_m3 = AppointmentColumn()
 
     class Meta:
         template = 'django_tables2/bootstrap.html'
@@ -120,15 +143,13 @@ def _appointment_table_row(time, user):
     }
     for machine in WashingMachine.objects.filter(isAvailable=True):
         row[APPOINTMENT_ATTR_TEMPLATE.format(machine.number)] = (
-            'coming soon' if bookable(
-                time=time, machine=machine, user=user,
-            ) else None
+            time, machine, user,
         )
     return row
 
 
 @login_required
-def book(request):
+def book(request, appointment=None):
     """Offer appointments for booking"""
     appointments_per_day = 16
     appointments_number = appointments_per_day * 7  # week
@@ -146,6 +167,16 @@ def book(request):
     context = {
         'appointments_table': table,
     }
+    if appointment is not None:
+        with BytesIO(appointment.encode()) as apstream:
+            apdata = JSONParser().parse(apstream)
+        appointment_serial = AppointmentSerializer(data=apdata)
+        if appointment_serial.is_valid():
+            apval = appointment_serial.validated_data
+            context['message'] = 'You can book {} at {} soon!'.format(
+                apval['machine'], apval['time'])
+        else:
+            context['message'] = 'Something went wrong!'
     return render(request, 'wasch/book.html', context)
 
 
