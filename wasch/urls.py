@@ -16,6 +16,7 @@ urlpatterns = [
     url(r'^book/(?P<appointment>[\w ,"{}:+-]+)/$', views.book, name='do_book'),
     url(r'^stats/$', views.stats, name='stats'),
     url(r'^status/$', views.status, name='status'),
+    url(r'^setup/$', views.setup, name='setup'),
     url(
         r'^statsapi_appointments_per_day/$',
         login_required(views.AppointmentsPerDayChart.as_view()),

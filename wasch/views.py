@@ -6,7 +6,10 @@ from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.utils.html import format_html
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout as auth_logout
+from django.contrib.auth import (
+    authenticate, login, logout as auth_logout, models as auth_models,
+)
+from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.six import BytesIO
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
@@ -16,6 +19,7 @@ from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
 from wasch.models import WashingMachine, Appointment, WashUser
 from wasch.serializers import AppointmentSerializer
+from wasch.auth import GodOnlyBackend
 
 
 def index_view(request):
@@ -251,3 +255,36 @@ class AppointmentsPerFloorChart(BaseLineChartView):
             [_appointments_per_floor(floor) for floor in self.floors],
             [_appointments_per_floor(floor, used=True) for floor in self.floors],
         ]
+
+
+def _tvk_setup():
+    """Create WashUser washgod, create machines 1, 2, 3 if not exist
+
+    :return list(django.db.models.Model): created objects
+    """
+    created = []
+    try:
+        god = auth_models.User.objects.get(
+            username=GodOnlyBackend.god_username)
+    except auth_models.User.DoesNotExist:
+        god = None  # god will be created in get_or_create_god
+    if god is None or not WashUser.objects.filter(user=god).exists():
+        created.append(GodOnlyBackend.get_or_create_god(create_washgod=True))
+    if not WashingMachine.objects.exists():
+        for number in 1, 2, 3:
+            machine = WashingMachine(number=number, isAvailable=False)
+            machine.save()
+            created.append(machine)
+    return created
+
+
+@staff_member_required
+def setup(request):
+    """Populate database with basic users and machines for TvK"""
+    created = _tvk_setup()
+    message = 'created {}'.format(created) if created else 'nothing done'
+    context = {
+        'title': 'Setup done!',
+        'contents': message,
+    }
+    return render(request, 'wasch/info.html', context)
