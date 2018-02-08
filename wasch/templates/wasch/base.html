@@ -18,6 +18,11 @@
 	<li><a href="{% url 'wasch:status' %}">Status</a></li>
 	<li><a href="{% url 'wasch:logout' %}">Logout</a></li>
       </ul>
+      {% if user.is_staff %}
+      <ul class="nav navbar-nav navbar-right">
+	<li><a href="{% url 'admin:index' %}">Admin</a></li>
+      </ul>
+      {% endif %}
     </div>
   </div>
   <div class="container">
