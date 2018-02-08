@@ -1,5 +1,7 @@
 import struct
 import operator
+import datetime
+import math
 from functools import reduce
 from django.db import models
 from django.conf import settings
@@ -85,6 +87,12 @@ class AppointmentError(RuntimeError):
 
 class AppointmentManager(models.Manager):
     """Manages table-wide operations."""
+    appointments_per_day = 16
+    """number of appointments each day is divided into"""
+    appointments_number = 16 * 7  # week
+    """number of appointments offered into the future"""
+    interval_minutes = 24 * 60 // appointments_per_day
+    """length of an appointment in minutes"""
 
     def appointment_exists(self, time, machine):
         """Returns True if an appointment has been booked at this time, and False if the appointment time is free."""
@@ -97,18 +105,52 @@ class AppointmentManager(models.Manager):
         # TODO: add logic to determine missing washing machine entries, input checks etc.
         # raise NotImplementedError
 
+    @classmethod
+    def next_appointment_number(cls, start_time=None):
+        if start_time is None:
+            start_time = datetime.datetime.now()
+        return math.ceil(
+            float(60 * start_time.hour + start_time.minute)
+            / cls.interval_minutes)
+
+    @classmethod
+    def next_appointment_time(cls, start_time=None):
+        if start_time is None:
+            start_time = datetime.datetime.now()
+        day_begin = datetime.datetime(
+            start_time.year, start_time.month, start_time.day)
+        return day_begin + datetime.timedelta(minutes=(
+            cls.next_appointment_number(start_time) * cls.interval_minutes))
+
+    @classmethod
+    def scheduled_appointment_times(cls, start_time=None):
+        begin = cls.next_appointment_time(start_time)
+        return [
+            begin + datetime.timedelta(minutes=i*cls.interval_minutes)
+            for i in range(cls.appointments_number)]
+
+    def why_not_bookable(self, time, machine, user):
+        """Reason of why an appointment for the machine at this time can
+        not be booked by the user. Return None if bookable."""
+        # check whether time is generally bookable
+        if not machine.isAvailable:
+            return 21
+        if not user.groups.filter(name='enduser').exists():
+            return 31
+        try:
+            if not WashUser.objects.get(pk=user).isActivated:
+                return 31
+        except WashUser.DoesNotExist:
+            return 31
+        if self.appointment_exists(time, machine):
+            return 41
+        if time not in self.scheduled_appointment_times():
+            return 11
+
     def bookable(self, time, machine, user):
         """Return whether an appointment for the machine at this time
         can be booked by the user. (this makes no reservation)"""
-        try:
-            return (
-                (not self.appointment_exists(time, machine))
-                and machine.isAvailable
-                and user.groups.filter(name='enduser').exists()
-                and WashUser.objects.get(pk=user).isActivated
-            )
-        except WashUser.DoesNotExist:
-            return False
+        return self.why_not_bookable(time, machine, user) is None
 
     def make_appointment(self, time, machine, user):
         """Creates an appointment for the user at the specified time."""

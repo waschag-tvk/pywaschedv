@@ -1,5 +1,4 @@
 import datetime
-import math
 from django.shortcuts import render
 from django.urls import reverse
 from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
@@ -143,19 +142,10 @@ def _appointment_table_row(time, user):
 @login_required
 def book(request, appointment=None):
     """Offer appointments for booking"""
-    appointments_per_day = 16
-    appointments_number = appointments_per_day * 7  # week
-    interval_minutes = 24 * 60 // appointments_per_day
-    now = datetime.datetime.now()
-    next_appointment_number = math.ceil(
-        float(60 * now.hour + now.minute) / interval_minutes)
-    begin = datetime.datetime(now.year, now.month, now.day)
-    begin += datetime.timedelta(
-        minutes=next_appointment_number*interval_minutes)
-    table = AppointmentTable([_appointment_table_row(
-        begin + datetime.timedelta(minutes=i*interval_minutes),
-        request.user,
-    ) for i in range(appointments_number)])
+    table = AppointmentTable([
+        _appointment_table_row(appointment_time, request.user)
+        for appointment_time
+        in Appointment.manager.scheduled_appointment_times()])
     context = {
         'appointments_table': table,
     }
