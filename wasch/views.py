@@ -87,18 +87,6 @@ def status(request):
     return render(request, 'wasch/status.html', context)
 
 
-def bookable(time, machine, user):
-    try:
-        return (
-            (not Appointment.manager.appointment_exists(time, machine))
-            and machine.isAvailable
-            and user.groups.filter(name='enduser').exists()
-            and WashUser.objects.get(pk=user).isActivated
-        )
-    except WashUser.DoesNotExist:
-        return False
-
-
 APPOINTMENT_ATTR_TEMPLATE = 'appointment_m{:d}'
 
 
@@ -108,7 +96,7 @@ class AppointmentColumn(django_tables2.Column):
         :param value tuple: time, machine, user
         """
         time, machine, user = value
-        if bookable(time=time, machine=machine, user=user):
+        if Appointment.manager.bookable(time=time, machine=machine, user=user):
             appointment = Appointment(time=time, user=user, machine=machine)
             appointment_serial = AppointmentSerializer(appointment)
             apjson = JSONRenderer().render(appointment_serial.data)

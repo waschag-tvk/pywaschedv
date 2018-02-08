@@ -62,6 +62,19 @@ class AppointmentManager(models.Manager):
         # TODO: add logic to determine missing washing machine entries, input checks etc.
         # raise NotImplementedError
 
+    def bookable(self, time, machine, user):
+        """Return whether an appointment for the machine at this time
+        can be booked by the user. (this makes no reservation)"""
+        try:
+            return (
+                (not self.appointment_exists(time, machine))
+                and machine.isAvailable
+                and user.groups.filter(name='enduser').exists()
+                and WashUser.objects.get(pk=user).isActivated
+            )
+        except WashUser.DoesNotExist:
+            return False
+
     def make_appointment(self, user, machine, time, is_bonus=False):
         """Creates an appointment for the user at the specified time."""
 
