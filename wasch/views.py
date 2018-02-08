@@ -263,13 +263,9 @@ def _tvk_setup():
     :return list(django.db.models.Model): created objects
     """
     created = []
-    try:
-        god = auth_models.User.objects.get(
-            username=GodOnlyBackend.god_username)
-    except auth_models.User.DoesNotExist:
-        god = None  # god will be created in get_or_create_god
-    if god is None or not WashUser.objects.filter(user=god).exists():
-        created.append(GodOnlyBackend.get_or_create_god(create_washgod=True))
+    god, was_created = GodOnlyBackend.get_or_create_god(create_washgod=True)
+    if was_created:
+        created.append(god)
     if not WashingMachine.objects.exists():
         for number in 1, 2, 3:
             machine = WashingMachine(number=number, isAvailable=False)
