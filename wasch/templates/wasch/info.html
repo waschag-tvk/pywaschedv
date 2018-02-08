@@ -1,1 +1,7 @@
-test
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}{{ title|default:"Pywaschedv" }}{% endblock %}
+{% block content %}
+<h1 class="page-header">{{ title|default:"Pywaschedv" }}</h1>
+{{ contents|linebreaks }}
+{% endblock %}
