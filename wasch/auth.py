@@ -1,10 +1,18 @@
 import crypt
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from wasch.models import WashUser
 
 
 class GodOnlyBackend:
     god_username = 'WaschRoss'
+    wash_group_names = ['enduser', 'waschag']
+
+    @classmethod
+    def get_or_create_wash_groups(cls):
+        return [
+            Group.objects.get_or_create(name=name)
+            for name in cls.wash_group_names
+        ]
 
     @classmethod
     def get_or_create_god(cls, create_washgod=True):
@@ -22,6 +30,8 @@ class GodOnlyBackend:
             washgod = WashUser(
                 user=GodOnlyBackend.god, isActivated=True, status=9)
             washgod.save()
+        for group, _ in cls.get_or_create_wash_groups():
+            god.groups.add(group)
         return god, was_created
 
     def authenticate(self, request, username=None, password=None):

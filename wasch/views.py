@@ -258,11 +258,15 @@ class AppointmentsPerFloorChart(BaseLineChartView):
 
 
 def _tvk_setup():
-    """Create WashUser washgod, create machines 1, 2, 3 if not exist
+    """Create WashUser god, groups enduser, waschag,
+    add god to both groups, create machines 1, 2, 3 if not exist
 
     :return list(django.db.models.Model): created objects
     """
     created = []
+    for group, was_created in GodOnlyBackend.get_or_create_wash_groups():
+        if was_created:
+            created.append(group)
     god, was_created = GodOnlyBackend.get_or_create_god(create_washgod=True)
     if was_created:
         created.append(god)
