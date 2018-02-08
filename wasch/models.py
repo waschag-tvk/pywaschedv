@@ -48,6 +48,10 @@ class WashingMachineAdmin(admin.ModelAdmin):
     pass
 
 
+class AppointmentError(RuntimeError):
+    pass
+
+
 class AppointmentManager(models.Manager):
     """Manages table-wide operations."""
 
@@ -75,11 +79,12 @@ class AppointmentManager(models.Manager):
         except WashUser.DoesNotExist:
             return False
 
-    def make_appointment(self, user, machine, time, is_bonus=False):
+    def make_appointment(self, time, machine, user):
         """Creates an appointment for the user at the specified time."""
 
         if self.appointment_exists(time, machine):
-            raise Exception("Can't book an appointment that is already booked")
+            raise AppointmentError(
+                "Can't book an appointment that is already booked")
 
         # TODO: finish writing
 
