@@ -48,8 +48,39 @@ class WashingMachineAdmin(admin.ModelAdmin):
     pass
 
 
+APPOINTMENT_ERROR_REASONS = {
+    11: 'Unsupported time',
+    21: 'Machine out of service',
+    31: 'User not active',
+    41: 'Appointment taken',
+}
+
+
 class AppointmentError(RuntimeError):
-    pass
+    def __init__(self, reason, time=None, machine=None, user=None):
+        if isinstance(reason, int):
+            # will raise KeyError if wrong reason
+            RuntimeError.__init__(self, APPOINTMENT_ERROR_REASONS[reason])
+        else:
+            raise NotImplementedError(
+                'reason has to be int from APPOINTMENT_ERROR_REASONS')
+        self.reason = reason
+        self.time = time
+        self.machine = machine
+        self.user = user
+
+    def long_reason(self):
+        if self.reason == 41:
+            return (
+                "Can't book an appointment for machine {} at {} that is "
+                'already booked'.format(self.machine, self.time)
+            )
+        # TODO good description for the rest of the reasons
+        else:
+            try:
+                return APPOINTMENT_ERROR_REASONS[self.reason]
+            except KeyError:
+                return 'Appointment error {}'.format(self.reason)
 
 
 class AppointmentManager(models.Manager):
@@ -83,9 +114,7 @@ class AppointmentManager(models.Manager):
         """Creates an appointment for the user at the specified time."""
 
         if self.appointment_exists(time, machine):
-            raise AppointmentError(
-                "Can't book an appointment that is already booked")
-
+            raise AppointmentError(41, time, machine, user)
         # TODO: finish writing
 
 
