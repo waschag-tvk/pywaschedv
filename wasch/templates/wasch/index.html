@@ -1,12 +1,8 @@
-<title>Pywaschedv Index</title>
-<ul>
-    <li>
-        <a href="{% url 'wasch:welcome' %}">Welcome</a>
-    </li>
-  <li>
-      <a href="{% url 'wasch:login' %}">Login</a>
-  </li>
-  <li>
-      <a href="{% url 'wasch:stats' %}">Stats</a>
-  </li>
-</ul>
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}Pywaschedv Index{% endblock %}
+{% block content %}
+<h1 class="page-header">Hello {{ user.first_name|default:user.username }}!</h1>
+<h2>Your appointments</h2>
+<p>Appointments will be shown here soon!</p>
+{% endblock %}
