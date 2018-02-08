@@ -16,7 +16,9 @@
 	<li><a href="{% url 'wasch:book' %}">Book</a></li>
 	<li><a href="{% url 'wasch:stats' %}">Stats</a></li>
 	<li><a href="{% url 'wasch:status' %}">Status</a></li>
+	{% if not user.is_anonymous %}
 	<li><a href="{% url 'wasch:logout' %}">Logout</a></li>
+	{% endif %}
       </ul>
       {% if user.is_staff %}
       <ul class="nav navbar-nav navbar-right">
