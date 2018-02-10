@@ -154,9 +154,9 @@ class AppointmentManager(models.Manager):
 
     def make_appointment(self, time, machine, user):
         """Creates an appointment for the user at the specified time."""
-
-        if self.appointment_exists(time, machine):
-            raise AppointmentError(41, time, machine, user)
+        error_reason = self.why_not_bookable(time, machine, user)
+        if error_reason is not None:
+            raise AppointmentError(error_reason, time, machine, user)
         # TODO: finish writing
 
 
