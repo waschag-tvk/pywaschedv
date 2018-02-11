@@ -3,11 +3,11 @@ import operator
 import datetime
 import math
 from functools import reduce
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
-from django.core import exceptions
 from django.contrib import admin
 
+WASCH_EPOCH = datetime.date(1980, 1, 1)
 
 STATUS_CHOICES = (
     (1, 'enduser'),
@@ -106,12 +106,25 @@ class AppointmentManager(models.Manager):
         # raise NotImplementedError
 
     @classmethod
-    def next_appointment_number(cls, start_time=None):
-        if start_time is None:
-            start_time = datetime.datetime.now()
+    def next_appointment_number(cls, start_time):
+        """Get next appointment beginning at or after given
+        start_time"""
+        minute = start_time.minute + (1 if start_time.second > 0 else 0)
         return math.ceil(
-            float(60 * start_time.hour + start_time.minute)
-            / cls.interval_minutes)
+            float(60 * start_time.hour + minute) / cls.interval_minutes)
+
+    @classmethod
+    def appointment_number_at(cls, time):
+        """Get appointment number of the appointment taking place at
+        given time.
+        Same as next_appointment_number if time is exactly the start of
+        an appointment. Otherwise next_appointment_number - 1."""
+        return (60 * time.hour + time.minute) // cls.interval_minutes
+
+    @classmethod
+    def time_of_appointment_number(cls, appointment_number):
+        return datetime.time() + datetime.timedelta(
+            minutes=appointment_number * cls.interval_minutes)
 
     @classmethod
     def next_appointment_time(cls, start_time=None):
@@ -120,7 +133,8 @@ class AppointmentManager(models.Manager):
         day_begin = datetime.datetime(
             start_time.year, start_time.month, start_time.day)
         return day_begin + datetime.timedelta(minutes=(
-            cls.next_appointment_number(start_time) * cls.interval_minutes))
+            cls.next_appointment_number(start_time.time())
+            * cls.interval_minutes))
 
     @classmethod
     def scheduled_appointment_times(cls, start_time=None):
@@ -128,6 +142,11 @@ class AppointmentManager(models.Manager):
         return [
             begin + datetime.timedelta(minutes=i*cls.interval_minutes)
             for i in range(cls.appointments_number)]
+
+    def filter_for_reference(self, reference):
+        tmp_appointment = Appointment.from_reference(reference, None)
+        return self.filter(
+            time=tmp_appointment.time, machine=tmp_appointment.machine)
 
     def why_not_bookable(self, time, machine, user):
         """Reason of why an appointment for the machine at this time can
@@ -152,11 +171,14 @@ class AppointmentManager(models.Manager):
         can be booked by the user. (this makes no reservation)"""
         return self.why_not_bookable(time, machine, user) is None
 
+    @transaction.atomic
     def make_appointment(self, time, machine, user):
         """Creates an appointment for the user at the specified time."""
         error_reason = self.why_not_bookable(time, machine, user)
         if error_reason is not None:
             raise AppointmentError(error_reason, time, machine, user)
+        appointment = self.create(
+            time=time, machine=machine, user=user, wasUsed=False)
         # TODO: finish writing
 
 
@@ -180,6 +202,10 @@ class Transaction(models.Model):
         db_table = 'transaction'
 
 
+def ref_checksum(ref_partial, sup=8):
+    return reduce(operator.xor, struct.pack('I', ref_partial)) % sup
+
+
 class Appointment(models.Model):
 
     time = models.DateTimeField()
@@ -190,22 +216,56 @@ class Appointment(models.Model):
     wasUsed = models.BooleanField()
     objects = models.Manager()
     manager = AppointmentManager()
-    reference = models.PositiveIntegerField()  # 0 to 2**31-1
 
     class Meta:
         db_table = 'appointments'
 
+    @property
+    def appointment_number(self):
+        return self.manager.appointment_number_at(self.time)
 
-def ref_checksum(ref_partial, sup=8):
-    return reduce(operator.xor, struct.pack('I', ref_partial)) % sup
+    @property
+    def reference(self):
+        """reference is 0 to 2**31 - 1, consisting of binary fields
+        18 for days since epoch (enough till year 2696!),
+        5 for appointment number,
+        2 for machine number (only 4 machines supported!),
+        3 for checksum
 
+        note: using datetime.timestamp, even without seconds, requires
+        far more space!
+        """
+        short_days = (self.time.date() - WASCH_EPOCH).days
+        if short_days < 0 or short_days >= 2**18:
+            raise ValueError('only years between 1980 and 2696 supported!')
+        reference = short_days << 5
+        reference += self.appointment_number
+        reference <<= 2
+        reference += self.machine.number % 4
+        reference <<= 3
+        return reference + ref_checksum(reference)
 
-def new_appointment(time, user, machine):
-    timestamp = time.timestamp()
-    reference = (timestamp << 2) + machine.number
-    reference = (reference << 3) + ref_checksum(reference)
-    return Appointment(
-            time=time, user=user, machine=machine, reference=reference)
+    @classmethod
+    def from_reference(cls, reference, user, allow_unsaved_machine=False):
+        checksum = reference % 8
+        reference >>= 3
+        if ref_checksum(reference) != checksum:
+            return ValueError('checksum does not match!')
+        try:
+            machine = WashingMachine.objects.get(number=reference % 4)
+        except WashingMachine.DoesNotExist:
+            if not allow_unsaved_machine:
+                raise
+            machine = WashingMachine(number=reference % 4)
+        reference >>= 2
+        time_of_day = AppointmentManager.time_of_appointment_number(
+            reference % 32)
+        reference >>= 5
+        # assumes time is the start time of appointment
+        time = datetime.combine(
+            WASCH_EPOCH + datetime.timedelta(days=reference),
+            time_of_day)
+        return cls(time=time, machine=machine, user=user)
 
 
 class WashParameters(models.Model):
