@@ -3,15 +3,18 @@ import datetime
 import traceback
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.contrib.auth.models import User
 # from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from wasch.models import Appointment, ref_checksum
+from wasch.models import Appointment, STATUS_CHOICES, WashingMachine, WashUser
 from wasch.serializers import AppointmentSerializer
-from legacymodels import Termine, DoesNotExist, Waschmaschinen
+from legacymodels import (
+    Termine, DoesNotExist, Waschmaschinen, Users as LegacyUser,
+)
 
 
 def machine_ready(machineId):
@@ -19,9 +22,6 @@ def machine_ready(machineId):
     '''
     state = Waschmaschinen.get(Waschmaschinen.id == machineId).status
     return state == 1
-
-
-LEGACY_EPOCH = datetime.date(1980, 1, 1)
 
 
 def time_from_legacy_zeit(zeit):
@@ -36,39 +36,39 @@ def appointment_from_legacy(Termine):
     # time = datetime.datetime(
     #        Termine.year, Termine.month, Termine.day, hour, minute)
     print('Termin found at {}'.format(time))
-    reference = (
-            ((Termine.datum - LEGACY_EPOCH).days)*32+Termine.zeit
-            )*4+Termine.maschine
-    reference = (reference << 3) + ref_checksum(reference)
-    return Appointment(
-            time=time, user=None, machine=None, reference=reference)
+    # not reading from or writing to django database since id's might be
+    # assigned differently
+    legacy_user = LegacyUser.get(LegacyUser.id == Termine.user)
+    user = WashUser(
+        user=User(username=legacy_user.login),
+        isActivated=not legacy_user.gesperrt,
+    )
+    status = legacy_user.status
+    if any(status == choice for choice, _ in STATUS_CHOICES):
+        user.status = status
+    machine = WashingMachine(number=Termine.maschine)
+    appointment = Appointment(time=time, user=user, machine=machine)
+    if Termine.wochentag >= 8:
+        appointment.wasUsed = True
+    return appointment
 
 
 def _legacy_use(reference):
     '''
     :param int bookingId:
     '''
-    tmp = reference
-    checksum = tmp % 8
-    tmp >>= 3
-    machine = tmp % 4
-    tmp >>= 2
-    time = tmp % 32
-    tmp >>= 5
-    if 256*64 <= tmp:
+    try:
+        appointment = Appointment.from_reference(
+            reference, allow_unsaved_machine=True)
+    except ValueError:
+        traceback.print_exc()
         return 'LEGACY_DATE_OUT_OF_RANGE'
     try:
-        date = LEGACY_EPOCH + datetime.timedelta(days=tmp)
-    except ValueError:
-        print('machine: {}, time: {}, ord: {}'.format(machine, time, tmp))
-        traceback.print_exc()
-        return 'INVALID_LEGACY_ID'
-    try:
         item = Termine.get(
-                Termine.maschine == machine,
-                Termine.zeit == time,
-                Termine.datum == date,
-                )
+            Termine.maschine == appointment.machine.number,
+            Termine.zeit == appointment.appointment_number,
+            Termine.datum == appointment.time.date(),
+        )
     except DoesNotExist:
         return 'UNKNOWN_APPOINTMENT'
     if item.wochentag >= 8:
@@ -79,9 +79,9 @@ def _legacy_use(reference):
     except DoesNotExist:
         return 'UNKNOWN_MACHINE'
     query = Termine.update(wochentag=8).where(
-            Termine.maschine == machine,
-            Termine.zeit == time,
-            Termine.datum == date,
+            Termine.maschine == item.maschine,
+            Termine.zeit == item.zeit,
+            Termine.datum == item.datum,
             Termine.wochentag < 8,
             )  # marks as used
     n = query.execute()
