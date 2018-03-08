@@ -20,7 +20,7 @@ class GodOnlyBackend:
             god = User.objects.get(username=cls.god_username)
             was_created = False
         except User.DoesNotExist:
-            god = User.create(
+            god = User.objects.create(
                 username=cls.god_username,
                 is_staff=True,
                 is_superuser=True,
@@ -28,7 +28,7 @@ class GodOnlyBackend:
             was_created = True
         if create_washgod and not WashUser.objects.filter(user=god).exists():
             washgod = WashUser(
-                user=GodOnlyBackend.god, isActivated=True, status=9)
+                user=god, isActivated=True, status=9)
             washgod.save()
         for group, _ in cls.get_or_create_wash_groups():
             god.groups.add(group)
