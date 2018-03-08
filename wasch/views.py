@@ -18,7 +18,7 @@ from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
 from wasch.models import WashingMachine, Appointment, WashUser
 from wasch.serializers import AppointmentSerializer
-from wasch.auth import GodOnlyBackend
+from wasch import tvkutils
 
 
 def index_view(request):
@@ -244,31 +244,10 @@ class AppointmentsPerFloorChart(BaseLineChartView):
         ]
 
 
-def _tvk_setup():
-    """Create WashUser god, groups enduser, waschag,
-    add god to both groups, create machines 1, 2, 3 if not exist
-
-    :return list(django.db.models.Model): created objects
-    """
-    created = []
-    for group, was_created in GodOnlyBackend.get_or_create_wash_groups():
-        if was_created:
-            created.append(group)
-    god, was_created = GodOnlyBackend.get_or_create_god(create_washgod=True)
-    if was_created:
-        created.append(god)
-    if not WashingMachine.objects.exists():
-        for number in 1, 2, 3:
-            machine = WashingMachine(number=number, isAvailable=False)
-            machine.save()
-            created.append(machine)
-    return created
-
-
 @staff_member_required
 def setup(request):
     """Populate database with basic users and machines for TvK"""
-    created = _tvk_setup()
+    created = tvkutils.setup()
     message = 'created {}'.format(created) if created else 'nothing done'
     context = {
         'title': 'Setup done!',
