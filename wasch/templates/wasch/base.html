@@ -28,6 +28,11 @@
     </div>
   </div>
   <div class="container">
+    {% for alert in waschAlerts %}
+    <div class="wasch-alert alert alert-{{ alert.class|default:"info" }}">
+      {{ alert.text|linebreaks }}
+    </div>
+    {% endfor %}{# waschAlerts #}
     {% block content %}{% endblock %}
   </div>
 </body>

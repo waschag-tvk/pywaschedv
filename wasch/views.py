@@ -139,6 +139,14 @@ def _appointment_table_row(time, user):
     return row
 
 
+def _status_alerts():
+    unavailableMachines = WashingMachine.objects.filter(isAvailable=False)
+    return [{
+        'text': '{} is not available!'.format(machine),
+        'class': 'warning',
+    } for machine in unavailableMachines]
+
+
 @login_required
 def book(request, appointment=None):
     """Offer appointments for booking"""
@@ -148,6 +156,7 @@ def book(request, appointment=None):
         in Appointment.manager.scheduled_appointment_times()])
     context = {
         'appointments_table': table,
+        'waschAlerts': _status_alerts(),
     }
     if appointment is not None:
         with BytesIO(appointment.encode()) as apstream:
