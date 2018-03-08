@@ -4,6 +4,7 @@ import datetime
 import math
 from functools import reduce
 from django.db import models, transaction
+from django.dispatch import receiver
 from django.conf import settings
 from django.contrib import admin
 
@@ -30,6 +31,15 @@ class WashUser(models.Model):
 
     class Meta:
         db_table = 'washuser'
+
+
+def user_is_washuser(user):
+    # default related_name according to
+    # https://docs.djangoproject.com/en/2.0/ref/models/fields/#onetoonefield
+    try:
+        return user.washuser is not None
+    except WashUser.DoesNotExist:
+        return False
 
 
 class WashingMachine(models.Model):
@@ -202,6 +212,14 @@ class Transaction(models.Model):
         db_table = 'transaction'
 
 
+@receiver(models.signals.post_init, sender=Transaction)
+def post_init_transaction(sender, **kwargs):
+    if not user_is_washuser(kwargs['instance'].fromUser):
+        raise ValueError('Given fromUser is not a WashUser!')
+    if not user_is_washuser(kwargs['instance'].toUser):
+        raise ValueError('Given toUser is not a WashUser!')
+
+
 def ref_checksum(ref_partial, sup=8):
     return reduce(operator.xor, struct.pack('I', ref_partial)) % sup
 
@@ -266,6 +284,12 @@ class Appointment(models.Model):
             WASCH_EPOCH + datetime.timedelta(days=reference),
             time_of_day)
         return cls(time=time, machine=machine, user=user)
+
+
+@receiver(models.signals.post_init, sender=Appointment)
+def post_init_appointment(sender, **kwargs):
+    if not user_is_washuser(kwargs['instance'].user):
+        raise ValueError('Given user is not a WashUser!')
 
 
 class WashParameters(models.Model):
