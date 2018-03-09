@@ -169,6 +169,8 @@ APPOINTMENT_ERROR_REASONS = {
     21: 'Machine out of service',
     31: 'User not active',
     41: 'Appointment taken',
+    51: 'Appointment cancelled',  # for use
+    61: 'Appointment already used',  # for cancellation
 }
 
 
@@ -352,13 +354,22 @@ class Appointment(models.Model):
     class Meta:
         db_table = 'appointments'
 
+    @transaction.atomic
     def cancel(self):
         # TODO refund
+        if self.wasUsed:
+            raise AppointmentError(61, self.time, self.machine, self.user)
         self.canceled = True
         self.save()
 
+    @transaction.atomic
     def rebook(self):
         # TODO payment
+        error_reason = self.why_not_bookable(
+            self.time, self.machine, self.user)
+        if error_reason is not None:
+            raise AppointmentError(
+                error_reason, self.time, self.machine, self.user)
         self.canceled = False
         self.save()
 
