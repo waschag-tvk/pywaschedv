@@ -365,7 +365,7 @@ class Appointment(models.Model):
     @transaction.atomic
     def rebook(self):
         # TODO payment
-        error_reason = self.why_not_bookable(
+        error_reason = Appointment.manager.why_not_bookable(
             self.time, self.machine, self.user)
         if error_reason is not None:
             raise AppointmentError(
