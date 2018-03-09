@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.dispatch import receiver
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth.models import User, Group
 
 WASCH_EPOCH = datetime.date(1980, 1, 1)
 
@@ -18,6 +19,81 @@ STATUS_CHOICES = (
     (9, 'god'),
 )
 
+GOD_NAME = 'WaschRoss'
+
+WASCH_GROUP_NAMES = ['enduser', 'waschag']
+
+# groups, is_staff, is_superuser
+STATUS_RIGHTS = {
+    1: (['enduser'], False, False),
+    3: (['enduser'], False, False),
+    5: (WASCH_GROUP_NAMES, True, False),
+    7: (WASCH_GROUP_NAMES, True, False),
+    9: (WASCH_GROUP_NAMES, True, True),
+}
+
+
+def get_or_create_wash_groups():
+    return [
+        Group.objects.get_or_create(name=name)
+        for name in WASCH_GROUP_NAMES
+    ]
+
+
+class StatusRights:
+    """Friendly access to status rights"""
+
+    def __init__(self, status):
+        self.status = status
+
+    @property
+    def groups(self):
+        """Names of groups"""
+        return STATUS_RIGHTS[self.status][0]
+
+    @property
+    def is_staff(self):
+        return STATUS_RIGHTS[self.status][1]
+
+    @property
+    def is_superuser(self):
+        return STATUS_RIGHTS[self.status][2]
+
+
+class WashUserManager(models.Manager):
+    def _create_with_user(
+            self, user_or_username, isActivated, status, **kwargs):
+        if isinstance(user_or_username, User):
+            user = user_or_username
+        else:
+            user = User.objects.create(username=user_or_username, **kwargs)
+        try:
+            washuser = self.get(user=user)
+        except WashUser.DoesNotExist:  # normally expected
+            washuser = self.create(
+                user=user, isActivated=isActivated, status=status)
+        if isActivated:
+            washuser.activate()
+        return washuser
+
+    def create_enduser(self, user_or_username, isActivated=True, **kwargs):
+        """This is what you normally use"""
+        return self._create_with_user(
+            user_or_username, status=1, isActivated=isActivated, **kwargs)
+
+    def get_or_create_god(self):
+        was_created = True
+        try:
+            god_user = User.objects.get(username=GOD_NAME)
+            god = self.get(user=god_user)
+            was_created = False
+        except User.DoesNotExist:
+            god = self._create_with_user(GOD_NAME, status=9, isActivated=True)
+        except WashUser.DoesNotExist:
+            god = self._create_with_user(
+                god_user, status=9, isActivated=True)
+        return god, was_created
+
 
 class WashUser(models.Model):
 
@@ -28,6 +104,34 @@ class WashUser(models.Model):
     )
     isActivated = models.BooleanField()
     status = models.SmallIntegerField(choices=STATUS_CHOICES)
+    objects = WashUserManager()
+
+    def activate(self):
+        status_rights = StatusRights(self.status)
+        groups = [
+            group for group, _ in (
+                Group.objects.get_or_create(name=group_name)
+                for group_name in status_rights.groups
+            )]
+        self.user.groups.add(*groups)
+        # only adding rights
+        if status_rights.is_staff:
+            self.user.is_staff = True
+        if status_rights.is_superuser:
+            self.user.is_superuser = True
+        self.user.save()
+        self.isActivated = True
+        self.save()
+
+    def deactivate(self):
+        if self.status == 9:
+            raise ValueError('God should not be deactivated!')
+        self.user.groups.clear()
+        self.user.is_staff = False
+        self.user.is_superuser = False
+        self.user.save()
+        self.isActivated = False
+        self.save()
 
     class Meta:
         db_table = 'washuser'
@@ -38,7 +142,7 @@ def user_is_washuser(user):
     # https://docs.djangoproject.com/en/2.0/ref/models/fields/#onetoonefield
     try:
         return user.washuser is not None
-    except WashUser.DoesNotExist:
+    except User.DoesNotExist:
         return False
 
 

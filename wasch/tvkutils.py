@@ -1,5 +1,4 @@
-from wasch.models import WashingMachine
-from wasch.auth import GodOnlyBackend
+from wasch.models import WashingMachine, WashUser
 
 DEFAULT_MACHINE_CREATE_KWARGS = {
     'isAvailable': False,
@@ -39,7 +38,8 @@ def get_or_create_machines(
         except WashingMachine.DoesNotExist:  # most likely case
             pass
         if machine is None:
-            machine = WashingMachine.create(number=number, **create_kwargs)
+            machine = WashingMachine.objects.create(
+                number=number, **create_kwargs)
             created.append(machine)
         allTvkMachines.append(machine)
     return allTvkMachines, created
@@ -52,10 +52,7 @@ def setup():
     :return list(django.db.models.Model): created objects
     """
     created = []
-    for group, was_created in GodOnlyBackend.get_or_create_wash_groups():
-        if was_created:
-            created.append(group)
-    god, was_created = GodOnlyBackend.get_or_create_god(create_washgod=True)
+    god, was_created = WashUser.objects.get_or_create_god()
     if was_created:
         created.append(god)
     if not WashingMachine.objects.exists():

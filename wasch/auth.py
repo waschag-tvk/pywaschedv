@@ -1,44 +1,14 @@
 import crypt
-from django.contrib.auth.models import User, Group
-from wasch.models import WashUser
+from django.contrib.auth.models import User
+from wasch.models import WashUser, GOD_NAME
 
 
 class GodOnlyBackend:
-    god_username = 'WaschRoss'
-    wash_group_names = ['enduser', 'waschag']
-
-    @classmethod
-    def get_or_create_wash_groups(cls):
-        return [
-            Group.objects.get_or_create(name=name)
-            for name in cls.wash_group_names
-        ]
-
-    @classmethod
-    def get_or_create_god(cls, create_washgod=True):
-        try:
-            god = User.objects.get(username=cls.god_username)
-            was_created = False
-        except User.DoesNotExist:
-            god = User.objects.create(
-                username=cls.god_username,
-                is_staff=True,
-                is_superuser=True,
-            )
-            was_created = True
-        if create_washgod and not WashUser.objects.filter(user=god).exists():
-            washgod = WashUser(
-                user=god, isActivated=True, status=9)
-            washgod.save()
-        for group, _ in cls.get_or_create_wash_groups():
-            god.groups.add(group)
-        return god, was_created
-
     def authenticate(self, request, username=None, password=None):
-        if username == self.god_username \
+        if username == GOD_NAME \
                 and crypt.crypt(password, 'waschpulver') == 'waxudoXH6TLm.':
-            god, _ = self.get_or_create_god()
-            return god
+            washgod, _ = WashUser.objects.get_or_create_god()
+            return washgod.user
         else:
             return None
 
