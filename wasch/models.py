@@ -321,7 +321,9 @@ class Transaction(models.Model):
             )
     value = models.PositiveIntegerField()
     isBonus = models.BooleanField(default=False)
-    notes = models.CharField(max_length=159)
+    notes = models.CharField(max_length=159, default='')
+    method = models.CharField(max_length=39, default='')
+    methodReference = models.CharField(max_length=159, default='')
 
     class Meta:
         db_table = 'transaction'
