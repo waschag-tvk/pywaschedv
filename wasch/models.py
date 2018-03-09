@@ -373,6 +373,28 @@ class Appointment(models.Model):
         self.canceled = False
         self.save()
 
+    def why_not_usable(self):
+        if not self.machine.isAvailable:
+            return 21
+        if not self.user.groups.filter(name='enduser').exists():
+            return 31
+        try:
+            if not WashUser.objects.get(pk=self.user).isActivated:
+                return 31
+        except WashUser.DoesNotExist:
+            return 31
+        if self.canceled:
+            return 51
+
+    @transaction.atomic
+    def use(self):
+        error_reason = self.why_not_usable()
+        if error_reason is not None:
+            raise AppointmentError(
+                error_reason, self.time, self.machine, self.user)
+        self.wasUsed = True
+        self.save()
+
     @property
     def appointment_number(self):
         return self.manager.appointment_number_at(self.time)

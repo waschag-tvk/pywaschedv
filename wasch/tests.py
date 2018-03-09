@@ -107,3 +107,16 @@ class AppointmentTestCase(TestCase):
         appointment.cancel()
         self.assertTrue(Appointment.manager.bookable(
             self.exampleTime, self.exampleMachine, user))
+
+    def test_use(self):
+        user = User.objects.get(username=self.exampleUserName)
+        appointment = Appointment.manager.make_appointment(
+            self.exampleTime, self.exampleMachine, user)
+        appointment.use()
+        with self.assertRaises(AppointmentError) as ae:
+            appointment.rebook()
+        self.assertEqual(ae.exception.reason, 41)  # Appointment taken
+        with self.assertRaises(AppointmentError) as ae:
+            appointment.cancel()
+        self.assertEqual(ae.exception.reason, 61)  # Appointment already used
+        self.assertTrue(appointment.wasUsed)
