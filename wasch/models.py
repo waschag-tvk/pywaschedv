@@ -209,12 +209,14 @@ class AppointmentManager(models.Manager):
     """length of an appointment in minutes"""
 
     def appointment_exists(self, time, machine):
-        """Returns True if an appointment has been booked at this time, and False if the appointment time is free."""
+        """Returns True if an appointment has been booked at this time
+        (and not canceled), and False if the appointment time is free.
+        """
 
         # search for appointments at this time for this machine
-        appointment_qs = self.filter(time=time).filter(machine=machine)
-
-        return len(appointment_qs) != 0
+        appointment_qs = self.filter(
+            time=time, machine=machine, canceled=False)
+        return appointment_qs.exists()
 
         # TODO: add logic to determine missing washing machine entries, input checks etc.
         # raise NotImplementedError
@@ -291,9 +293,16 @@ class AppointmentManager(models.Manager):
         error_reason = self.why_not_bookable(time, machine, user)
         if error_reason is not None:
             raise AppointmentError(error_reason, time, machine, user)
-        appointment = self.create(
-            time=time, machine=machine, user=user, wasUsed=False)
-        # TODO: finish writing
+        try:
+            my_canceled_appointment = self.get(
+                time=time, machine=machine, user=user)
+            my_canceled_appointment.rebook()
+            return my_canceled_appointment
+        except Appointment.DoesNotExist:  # normal case
+            appointment = self.create(
+                time=time, machine=machine, user=user, wasUsed=False)
+            # TODO: finish writing
+            return appointment
 
 
 class Transaction(models.Model):
@@ -336,11 +345,22 @@ class Appointment(models.Model):
     # multiple transactions if bonus portion, refunds etc. exist
     transactions = models.ManyToManyField(Transaction)
     wasUsed = models.BooleanField()
+    canceled = models.BooleanField(default=False)
     objects = models.Manager()
     manager = AppointmentManager()
 
     class Meta:
         db_table = 'appointments'
+
+    def cancel(self):
+        # TODO refund
+        self.canceled = True
+        self.save()
+
+    def rebook(self):
+        # TODO payment
+        self.canceled = False
+        self.save()
 
     @property
     def appointment_number(self):
