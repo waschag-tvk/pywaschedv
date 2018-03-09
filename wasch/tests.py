@@ -6,7 +6,9 @@ from django.contrib.auth.models import (
 from wasch.models import (
     Appointment,
     WashUser,
-    StatusRights,  # not a model
+    # not models:
+    AppointmentError,
+    StatusRights,
 )
 from wasch import tvkutils
 
@@ -67,6 +69,7 @@ class AppointmentTestCase(TestCase):
     def test_bookable(self):
         user = User.objects.get(username=self.exampleUserName)
         poorUser = User.objects.get(username=self.examplePoorUserName)
+        god, _ = WashUser.objects.get_or_create_god()
         self.assertEqual(
             Appointment.manager.why_not_bookable(
                 self.exampleTime, self.exampleMachine, poorUser),
@@ -74,6 +77,8 @@ class AppointmentTestCase(TestCase):
         )
         self.assertTrue(Appointment.manager.bookable(
             self.exampleTime, self.exampleMachine, user))
+        self.assertTrue(Appointment.manager.bookable(
+            self.exampleTime, self.exampleMachine, god.user))
         self.assertEqual(
             Appointment.manager.why_not_bookable(
                 self.exampleTooOldTime, self.exampleMachine, user),
@@ -84,3 +89,21 @@ class AppointmentTestCase(TestCase):
                 self.exampleTime, self.exampleBrokenMachine, user),
             21,  # Machine out of service
         )
+
+    def test_make_appointment(self):
+        user = User.objects.get(username=self.exampleUserName)
+        god, _ = WashUser.objects.get_or_create_god()
+        appointment = Appointment.manager.make_appointment(
+            self.exampleTime, self.exampleMachine, user)
+        self.assertEqual(
+            Appointment.manager.why_not_bookable(
+                self.exampleTime, self.exampleMachine, god.user),
+            41,  # Appointment taken
+        )
+        with self.assertRaises(AppointmentError) as ae:
+            Appointment.manager.make_appointment(
+                self.exampleTime, self.exampleMachine, user)
+        self.assertEqual(ae.exception.reason, 41)
+        appointment.cancel()
+        self.assertTrue(Appointment.manager.bookable(
+            self.exampleTime, self.exampleMachine, user))
