@@ -1,4 +1,4 @@
-from wasch.models import WashingMachine, WashUser
+from wasch.models import WashingMachine, WashUser, WashParameters
 
 DEFAULT_MACHINE_CREATE_KWARGS = {
     'isAvailable': False,
@@ -45,6 +45,20 @@ def get_or_create_machines(
     return allTvkMachines, created
 
 
+def set_default_settings():
+    WashParameters.objects.bulk_create([
+        WashParameters(name=name, value=value) for name, value in (
+            ('payment-method', 'empty'),
+            ('price', '100'),  # in EUR Cent to be paid by user per wash
+            ('ration', '12'),  # allowed use per month per user
+            ('bonus-waschag', '1200'),  # in EUR Cent per month
+            ('retention-time', '100'),  # keep user data; in days
+            ('retention-time-waschag', '250'),  # keep waschag user data
+            ('cancel-period', '5'),  # this many minutes prior to appointment
+        )
+    ])
+
+
 def setup():
     """Create WashUser god, groups enduser, waschag,
     add god to both groups, create machines 1, 2, 3 if not exist
@@ -58,4 +72,5 @@ def setup():
     if not WashingMachine.objects.exists():
         _, created_machines = get_or_create_machines()
         created.extend(created_machines)
+    set_default_settings()
     return created
