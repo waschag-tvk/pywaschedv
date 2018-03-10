@@ -132,6 +132,17 @@ class WashUser(models.Model):
         self.isActivated = False
         self.save()
 
+    @property
+    def remaining_ration(self):
+        """number of allowed use this month"""
+        if self.status == 9:
+            return GOD_RATION
+        ration = int(WashParameters.objects.get_value('ration'))
+        use = Appointment.objects.filter(
+            user=self.user, canceled=False,
+        ).count()
+        return ration - use
+
     class Meta:
         db_table = 'washuser'
 
@@ -162,8 +173,9 @@ APPOINTMENT_ERROR_REASONS = {
     11: 'Unsupported time',
     21: 'Machine out of service',
     31: 'User not active',
+    32: 'Monthly ration of user is used up',
     41: 'Appointment taken',
-    51: 'Appointment cancelled',  # for use
+    51: 'Appointment canceled',  # for use
     61: 'Appointment already used',  # for cancellation
 }
 
@@ -269,8 +281,11 @@ class AppointmentManager(models.Manager):
         if not user.groups.filter(name='enduser').exists():
             return 31
         try:
-            if not WashUser.objects.get(pk=user).isActivated:
+            washuser = WashUser.objects.get(pk=user)
+            if not washuser.isActivated:
                 return 31
+            if washuser.remaining_ration < 1:
+                return 32
         except WashUser.DoesNotExist:
             return 31
         if self.appointment_exists(time, machine):
@@ -299,6 +314,9 @@ class AppointmentManager(models.Manager):
                 time=time, machine=machine, user=user, wasUsed=False)
             # TODO: finish writing
             return appointment
+
+
+GOD_RATION = 31 * AppointmentManager.appointments_per_day
 
 
 class Transaction(models.Model):
