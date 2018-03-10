@@ -5,6 +5,7 @@ import math
 from functools import reduce
 from django.db import models, transaction
 from django.dispatch import receiver
+from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.models import User, Group
 from wasch import payment
@@ -255,9 +256,9 @@ class AppointmentManager(models.Manager):
             start_time = datetime.datetime.now()
         day_begin = datetime.datetime(
             start_time.year, start_time.month, start_time.day)
-        return day_begin + datetime.timedelta(minutes=(
+        return timezone.make_aware(day_begin + datetime.timedelta(minutes=(
             cls.next_appointment_number(start_time.time())
-            * cls.interval_minutes))
+            * cls.interval_minutes)))
 
     @classmethod
     def scheduled_appointment_times(cls, start_time=None):
@@ -474,7 +475,7 @@ class Appointment(models.Model):
         note: using datetime.timestamp, even without seconds, requires
         far more space!
         """
-        short_days = (self.time.date() - WASCH_EPOCH).days
+        short_days = (timezone.make_naive(self.time).date() - WASCH_EPOCH).days
         if short_days < 0 or short_days >= 2**18:
             raise ValueError('only years between 1980 and 2696 supported!')
         reference = short_days << 5
@@ -501,9 +502,9 @@ class Appointment(models.Model):
             reference % 32)
         reference >>= 5
         # assumes time is the start time of appointment
-        time = datetime.combine(
+        time = make_aware(datetime.combine(
             WASCH_EPOCH + datetime.timedelta(days=reference),
-            time_of_day)
+            time_of_day))
         return cls(time=time, machine=machine, user=user)
 
 

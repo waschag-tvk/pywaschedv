@@ -1,4 +1,5 @@
 import datetime
+from django.utils import timezone
 from django.test import TestCase
 from django.contrib.auth.models import (
     User,
@@ -28,7 +29,7 @@ class AppointmentTestCase(TestCase):
     exampleUserName = 'waschexample'
     examplePoorUserName = 'poor'
     exampleTime = Appointment.manager.scheduled_appointment_times()[-1]
-    exampleTooOldTime = datetime.datetime(1991, 12, 25)
+    exampleTooOldTime = timezone.make_aware(datetime.datetime(1991, 12, 25))
     exampleMachine, exampleBrokenMachine, lastMachine = \
         tvkutils.get_or_create_machines()[0]
 
