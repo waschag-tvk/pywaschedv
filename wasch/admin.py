@@ -1,10 +1,13 @@
 from django.contrib import admin
-from wasch.models import WashUser
+from wasch.models import WashUser, WashingMachine
 
 
+@admin.register(WashUser)
 class WashUserAdmin(admin.ModelAdmin):
     list_display = ['user', 'isActivated', 'status']
     ordering = ['user']
 
 
-admin.site.register(WashUser, WashUserAdmin)
+@admin.register(WashingMachine)
+class WashingMachineAdmin(admin.ModelAdmin):
+    pass

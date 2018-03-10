@@ -6,7 +6,6 @@ from functools import reduce
 from django.db import models, transaction
 from django.dispatch import receiver
 from django.conf import settings
-from django.contrib import admin
 from django.contrib.auth.models import User, Group
 
 WASCH_EPOCH = datetime.date(1980, 1, 1)
@@ -157,11 +156,6 @@ class WashingMachine(models.Model):
 
     class Meta:
         db_table = 'washingmachines'
-
-
-@admin.register(WashingMachine)
-class WashingMachineAdmin(admin.ModelAdmin):
-    pass
 
 
 APPOINTMENT_ERROR_REASONS = {
