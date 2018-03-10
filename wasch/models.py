@@ -316,8 +316,12 @@ class AppointmentManager(models.Manager):
             bonusAllowed = True
             notes = 'make appointment {}'.format(appointment.reference)
             service_washuser, _ = WashUser.objects.get_or_create_service_user()
-            Transaction.objects.pay(
-                price, user, service_washuser.user, bonusAllowed, notes)
+            try:
+                Transaction.objects.pay(
+                    price, user, service_washuser.user, bonusAllowed, notes)
+            except payment.PaymentError:
+                appointment.delete()
+                raise
             return appointment
 
 
