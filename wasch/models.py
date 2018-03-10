@@ -7,6 +7,7 @@ from django.db import models, transaction
 from django.dispatch import receiver
 from django.conf import settings
 from django.contrib.auth.models import User, Group
+from wasch import payment
 
 WASCH_EPOCH = datetime.date(1980, 1, 1)
 
@@ -19,6 +20,7 @@ STATUS_CHOICES = (
 )
 
 GOD_NAME = 'WaschRoss'
+SERVICE_USER_NAME = 'WaschService'
 
 WASCH_GROUP_NAMES = ['enduser', 'waschag']
 
@@ -60,38 +62,35 @@ class StatusRights:
 
 
 class WashUserManager(models.Manager):
-    def _create_with_user(
+    def _get_or_create_with_user(
             self, user_or_username, isActivated, status, **kwargs):
         if isinstance(user_or_username, User):
             user = user_or_username
+            user_was_created = False
         else:
-            user = User.objects.create(username=user_or_username, **kwargs)
-        try:
-            washuser = self.get(user=user)
-        except WashUser.DoesNotExist:  # normally expected
-            washuser = self.create(
-                user=user, isActivated=isActivated, status=status)
+            user, user_was_created = User.objects.get_or_create(
+                username=user_or_username, defaults=kwargs)
+        washuser, was_created = self.get_or_create(
+            user=user, defaults={'isActivated': isActivated, 'status': status})
         if isActivated:
             washuser.activate()
-        return washuser
+        return washuser, was_created, user_was_created
 
     def create_enduser(self, user_or_username, isActivated=True, **kwargs):
         """This is what you normally use"""
-        return self._create_with_user(
+        washuser, _, _ = self._get_or_create_with_user(
             user_or_username, status=1, isActivated=isActivated, **kwargs)
+        return washuser
 
     def get_or_create_god(self):
-        was_created = True
-        try:
-            god_user = User.objects.get(username=GOD_NAME)
-            god = self.get(user=god_user)
-            was_created = False
-        except User.DoesNotExist:
-            god = self._create_with_user(GOD_NAME, status=9, isActivated=True)
-        except WashUser.DoesNotExist:
-            god = self._create_with_user(
-                god_user, status=9, isActivated=True)
-        return god, was_created
+        god, was_created, user_was_created = self._get_or_create_with_user(
+            GOD_NAME, status=9, isActivated=True)
+        return god, was_created or user_was_created
+
+    def get_or_create_service_user(self):
+        service, was_created, user_was_created = self._get_or_create_with_user(
+            SERVICE_USER_NAME, status=5, isActivated=False)
+        return service, was_created or user_was_created
 
 
 class WashUser(models.Model):
@@ -312,11 +311,61 @@ class AppointmentManager(models.Manager):
         except Appointment.DoesNotExist:  # normal case
             appointment = self.create(
                 time=time, machine=machine, user=user, wasUsed=False)
-            # TODO: finish writing
+            price = int(WashParameters.objects.get_value('price'))
+            bonusAllowed = True
+            notes = 'make appointment {}'.format(appointment.reference)
+            service_washuser, _ = WashUser.objects.get_or_create_service_user()
+            Transaction.objects.pay(
+                price, user, service_washuser.user, bonusAllowed, notes)
             return appointment
 
 
 GOD_RATION = 31 * AppointmentManager.appointments_per_day
+
+
+class TransactionManager(models.Manager):
+    def pay(self, value, fromUser, toUser, bonusAllowed=True, notes=''):
+        '''
+        :raises PaymentError: when full payment wasn't achieved
+        '''
+        paid = 0
+        reference = ''
+        if bonusAllowed:
+            method = 'bonus'
+            bonusCoverage = payment.coverage(value, fromUser, method, True)
+            if bonusCoverage == value:  # only "all or nothing" implemented
+                paid, reference = payment.pay(
+                    value, fromUser, toUser, method, True, notes)
+        if paid > 0:
+            isBonus = True
+        else:
+            isBonus = False
+            method = WashParameters.objects.get_value('payment-method')
+            _, reference = payment.pay(
+                value, fromUser, toUser, method, False, notes)
+        return self.create(
+            fromUser=fromUser,
+            toUser=toUser,
+            value=value,
+            isBonus=isBonus,
+            notes=notes,
+            method=method,
+            methodReference=reference,
+        )
+
+    def refund(self, transaction):
+        # only full refund implemented
+        _, reference = payment.refund(
+            transaction.method, transaction.methodReference)
+        return self.create(
+            fromUser=transaction.toUser,
+            toUser=transaction.fromUser,
+            value=transaction.value,
+            isBonus=transaction.isBonus,
+            notes='refund {}\n{}'.format(transaction.pk, transaction.notes),
+            method=transaction.method,
+            methodReference=reference,
+        )
 
 
 class Transaction(models.Model):
@@ -336,6 +385,7 @@ class Transaction(models.Model):
     notes = models.CharField(max_length=159, default='')
     method = models.CharField(max_length=39, default='')
     methodReference = models.CharField(max_length=159, default='')
+    objects = TransactionManager()
 
     class Meta:
         db_table = 'transaction'
@@ -411,7 +461,7 @@ class Appointment(models.Model):
 
     @property
     def appointment_number(self):
-        return self.manager.appointment_number_at(self.time)
+        return Appointment.manager.appointment_number_at(self.time)
 
     @property
     def reference(self):

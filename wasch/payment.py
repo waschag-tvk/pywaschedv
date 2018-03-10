@@ -19,7 +19,7 @@ class BonusPayment:
         :param value int: value to be refunded (<= original value);
             defaults to None, meaning the whole original amount
         '''
-        return
+        return value, '0000000001'  # reference
 
 
 class EmptyPayment:
@@ -77,6 +77,8 @@ def pay(value, fromUser, toUser, method, bonusAllowed=True, notes=''):
         methodCoverage, reference = methodP.pay(
             remaining, fromUser.username, toUser.username, notes)
         remaining -= methodCoverage
+    else:
+        methodCoverage = bonusCoverage if methodP == BONUS_METHOD else 0
     if remaining == 0:
         return methodCoverage, reference  # XXX discarding bonusReference
     if bonusCoverage > 0:
@@ -84,3 +86,7 @@ def pay(value, fromUser, toUser, method, bonusAllowed=True, notes=''):
     if methodCoverage > 0:
         methodP.refund(methodCoverage)
     raise PaymentError("Full payment wasn't achieved")
+
+
+def refund(method, reference, value=None):
+    return METHODS[method].refund(reference, value)
