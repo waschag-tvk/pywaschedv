@@ -35,11 +35,21 @@ def _user_alerts(user):
     }]
 
 
+class PersonalAppointmentsTable(django_tables2.Table):
+    """Personal, thus not showing username"""
+    class Meta:
+        template = 'django_tables2/bootstrap.html'
+        model = Appointment
+        fields = ('time', 'machine', 'wasUsed', 'canceled')
+
+
 @login_required
 def index_view(request):
     """Returns the index view page."""
+    myAppointments = Appointment.objects.filter(user=request.user)
     context = {
         'waschAlerts': _status_alerts() + _user_alerts(request.user),
+        'my_appointments_table': PersonalAppointmentsTable(myAppointments)
     }
     return render(request, 'wasch/index.html', context)
 

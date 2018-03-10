@@ -4,5 +4,7 @@
 {% block content %}
 <h1 class="page-header">Hello {{ user.first_name|default:user.username }}!</h1>
 <h2>Your appointments</h2>
-<p>Appointments will be shown here soon!</p>
+
+{% load django_tables2 %}
+{% render_table my_appointments_table %}
 {% endblock %}
