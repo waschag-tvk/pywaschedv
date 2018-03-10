@@ -445,10 +445,30 @@ def post_init_appointment(sender, **kwargs):
         raise ValueError('Given user is not a WashUser!')
 
 
-class WashParameters(models.Model):
+class WashParametersManager(models.Manager):
+    def get_value(self, name):
+        return self.get(name=name).value
 
-    name = models.CharField(max_length=20)
+    def update_value(self, name, value):
+        return self.filter(name=name).update(value=value)
+
+
+class WashParameters(models.Model):
+    WASH_PARAM_NAMES = (
+        ('payment-method', 'payment method name'),
+        ('price', 'price in EUR Cent to be paid by user per wash'),
+        ('ration', 'allowed use per month per user'),
+        ('bonus-waschag', 'bonus for waschag members in EUR Cent per month'),
+        ('retention-time', 'days to keep user data'),
+        ('retention-time-waschag', 'days to keep waschag user data'),
+        (
+            'cancel-period',
+            'minimum minutes prior to appointment to allow cancellation'
+        ),
+    )
+    name = models.CharField(max_length=20, choices=WASH_PARAM_NAMES)
     value = models.CharField(max_length=20)  # convert this to correct format, depending on parameter
+    objects = WashParametersManager()
 
     class Meta:
         db_table = 'washparameters'
