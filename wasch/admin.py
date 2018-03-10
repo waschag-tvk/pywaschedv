@@ -10,4 +10,5 @@ class WashUserAdmin(admin.ModelAdmin):
 
 @admin.register(WashingMachine)
 class WashingMachineAdmin(admin.ModelAdmin):
-    pass
+    list_display = ['__str__', 'isAvailable', 'notes']
+    ordering = ['number']
