@@ -21,9 +21,27 @@ from wasch.serializers import AppointmentSerializer
 from wasch import tvkutils
 
 
+def _user_alerts(user):
+    try:
+        if WashUser.objects.get(pk=user).isActivated:
+            return []  # everything fine
+    except WashUser.DoesNotExist:
+        pass
+    return [{
+        'text':
+            'You ({}) are not active! '
+            'Please contact a staff to get activated.'.format(user.username),
+        'class': 'warning',
+    }]
+
+
+@login_required
 def index_view(request):
     """Returns the index view page."""
-    return render(request, 'wasch/index.html')
+    context = {
+        'waschAlerts': _status_alerts() + _user_alerts(request.user),
+    }
+    return render(request, 'wasch/index.html', context)
 
 
 def welcome_view(request):
