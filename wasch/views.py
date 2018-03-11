@@ -88,13 +88,20 @@ def legacy_method(
 @legacy_method
 def stats(request):
     """Show usage stats"""
-    users = Users.select(Users.login).execute()
-    machines = Waschmaschinen.select(Waschmaschinen.id).execute()
-    appointents = Termine.select(Termine.user).execute()
+    legacy = False
+    if legacy:
+        users_count = len(Users.select(Users.login).execute())
+        machines_count = len(
+            Waschmaschinen.select(Waschmaschinen.id).execute())
+        appointents_count = len(Termine.select(Termine.user).execute())
+    else:
+        users_count = WashUser.objects.count()
+        machines_count = WashingMachine.objects.count()
+        appointents_count = Appointment.objects.filter(canceled=False).count()
     context = {
-        'userscount': len(users),
-        'machinescount': len(machines),
-        'appointmentscount': len(appointents),
+        'userscount': users_count,
+        'machinescount': machines_count,
+        'appointmentscount': appointents_count,
     }
     return render(request, 'wasch/stats.html', context)
 
@@ -211,40 +218,52 @@ def book(request, appointment=None):
 
 
 def _appointments_per_day(day, used=None):
-    query = Termine.select(Termine.datum, Termine.wochentag).where(
-        Termine.datum.year == day.year,
-        Termine.datum.month == day.month,
-        Termine.datum.day == day.day,
-    )
-    if used is not None:
-        query = query.where(
-            (Termine.wochentag == 8) == used,
+    legacy = False
+    if legacy:
+        query = Termine.select(Termine.datum, Termine.wochentag).where(
+            Termine.datum.year == day.year,
+            Termine.datum.month == day.month,
+            Termine.datum.day == day.day,
         )
-    return len(query.execute())
-
-
-def _appointments_per_floor(floor, used=None):
-    users = Users.select(Users.id).where(
-        Users.zimmer > 100 * floor,
-        Users.zimmer < 100 * (floor + 1),
-    )
-    count = 0
-    for user in users:
-        query = Termine.select(Termine.wochentag).where(Termine.user == user)
         if used is not None:
             query = query.where(
                 (Termine.wochentag == 8) == used,
             )
-        count += len(query.execute())
-    return count
+        return len(query.execute())
+    return Appointment.objects.filter(time__date=day).count()
+
+
+def _appointments_per_floor(floor, used=None):
+    legacy = False
+    if legacy:
+        users = Users.select(Users.id).where(
+            Users.zimmer > 100 * floor,
+            Users.zimmer < 100 * (floor + 1),
+        )
+        count = 0
+        for user in users:
+            query = Termine.select(Termine.wochentag).where(
+                Termine.user == user)
+            if used is not None:
+                query = query.where(
+                    (Termine.wochentag == 8) == used,
+                )
+            count += len(query.execute())
+        return count
+    elif floor == 0:  # XXX just show everything here
+        if used is not None:
+            return Appointment.objects.filter(wasUsed=used).count()
+        return Appointment.objects.filter(canceled=False).count()
+    else:
+        return 0
 
 
 class AppointmentsPerDayChart(BaseLineChartView):
     def __init__(self, *args, **kwargs):
         BaseLineChartView.__init__(self, *args, **kwargs)
-        end = datetime.date.today()
         self.steps = 3
         self.duration = 30
+        end = datetime.date.today() + datetime.timedelta(days=self.steps)
         self.days = [
             end + datetime.timedelta(days=d) for d in range(-self.duration, 0, self.steps)]
 
