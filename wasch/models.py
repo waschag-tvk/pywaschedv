@@ -620,7 +620,8 @@ class WashParameters(models.Model):
             'minimum minutes prior to appointment to allow cancellation'
         ),
     )
-    name = models.CharField(max_length=20, choices=WASH_PARAM_NAMES)
+    name = models.CharField(
+        max_length=20, choices=WASH_PARAM_NAMES, unique=True)
     value = models.CharField(max_length=20)  # convert this to correct format, depending on parameter
     objects = WashParametersManager()
 

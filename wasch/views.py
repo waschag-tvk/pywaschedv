@@ -17,8 +17,10 @@ import django_tables2
 from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
 from wasch.models import WashingMachine, Appointment, WashUser, WashParameters
+from wasch.models import AppointmentError  # not models
 from wasch.serializers import AppointmentSerializer
 from wasch import tvkutils
+from wasch.payment import PaymentError
 
 
 def _user_alerts(user):
@@ -176,14 +178,23 @@ def book(request, appointment=None):
         appointment_serial = AppointmentSerializer(data=apdata)
         if appointment_serial.is_valid():
             apval = appointment_serial.validated_data
-            context['message'] = 'You can book {} at {} soon!'.format(
-                apval['machine'], apval['time'])
             if 'confirm' in request.GET:
                 context['washer_time'] = str(apval['time'])
                 context['price'] = '{:.2f} EUR'.format(
                     int(WashParameters.objects.get_value('price')) / 100.)
                 context['appointment_str'] = appointment
                 return render(request, 'wasch/book-confirm.html', context)
+            try:
+                appointment = Appointment.manager.make_appointment(
+                    apval['time'], apval['machine'], request.user)
+                context['message'] = 'You just booked {} for {}!'.format(
+                    appointment.machine, appointment.time)
+            except AppointmentError:
+                context['message'] = (
+                    'Appointment for {} at {} seems no longer available!'
+                    .format(apval['machine'], apval['time']))
+            except PaymentError:
+                context['message'] = 'Payment has failed!'
         else:
             context['message'] = 'Something went wrong!'
     machines = tuple(WashingMachine.objects.filter(isAvailable=True))

@@ -46,6 +46,7 @@ def get_or_create_machines(
 
 
 def set_default_settings():
+    WashParameters.objects.all().delete()
     WashParameters.objects.bulk_create([
         WashParameters(name=name, value=value) for name, value in (
             ('payment-method', 'empty'),
