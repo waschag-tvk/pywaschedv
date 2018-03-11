@@ -247,8 +247,11 @@ class AppointmentManager(models.Manager):
 
     @classmethod
     def time_of_appointment_number(cls, appointment_number):
-        return datetime.time() + datetime.timedelta(
-            minutes=appointment_number * cls.interval_minutes)
+        # datetime.time can't add datetime.timedelta
+        minute = appointment_number * cls.interval_minutes
+        hour = (minute // 60) % 24
+        minute %= 60
+        return datetime.time(hour=hour, minute=minute)
 
     @classmethod
     def next_appointment_time(cls, start_time=None):
@@ -548,15 +551,16 @@ class Appointment(models.Model):
         reference += self.appointment_number
         reference <<= 2
         reference += self.machine.number % 4
+        checksum = ref_checksum(reference)
         reference <<= 3
-        return reference + ref_checksum(reference)
+        return reference + checksum
 
     @classmethod
     def from_reference(cls, reference, user, allow_unsaved_machine=False):
         checksum = reference % 8
         reference >>= 3
         if ref_checksum(reference) != checksum:
-            return ValueError('checksum does not match!')
+            raise ValueError('checksum does not match!')
         try:
             machine = WashingMachine.objects.get(number=reference % 4)
         except WashingMachine.DoesNotExist:
@@ -568,7 +572,7 @@ class Appointment(models.Model):
             reference % 32)
         reference >>= 5
         # assumes time is the start time of appointment
-        time = make_aware(datetime.combine(
+        time = timezone.make_aware(datetime.datetime.combine(
             WASCH_EPOCH + datetime.timedelta(days=reference),
             time_of_day))
         return cls(time=time, machine=machine, user=user)

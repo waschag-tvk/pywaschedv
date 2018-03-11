@@ -30,6 +30,7 @@ class AppointmentTestCase(TestCase):
     examplePoorUserName = 'poor'
     exampleTime = Appointment.manager.scheduled_appointment_times()[-1]
     exampleTooOldTime = timezone.make_aware(datetime.datetime(1991, 12, 25))
+    exampleTooOldReference = 4481037
     exampleMachine, exampleBrokenMachine, lastMachine = \
         tvkutils.get_or_create_machines()[0]
 
@@ -85,6 +86,17 @@ class AppointmentTestCase(TestCase):
                 self.exampleTooOldTime, self.exampleMachine, user),
             11,  # Unsupported time
         )
+        unsavedTooOldAppointment = Appointment.from_reference(
+            self.exampleTooOldReference, user)
+        self.assertEqual(self.exampleTooOldReference, Appointment(
+            time=self.exampleTooOldTime, machine=self.exampleMachine,
+            user=user).reference)
+        self.assertEqual(unsavedTooOldAppointment.time, self.exampleTooOldTime)
+        self.assertEqual(unsavedTooOldAppointment.machine, self.exampleMachine)
+        self.assertEqual(
+            unsavedTooOldAppointment.user.username, self.exampleUserName)
+        self.assertEqual(
+            unsavedTooOldAppointment.reference, self.exampleTooOldReference)
         self.assertEqual(
             Appointment.manager.why_not_bookable(
                 self.exampleTime, self.exampleBrokenMachine, user),
