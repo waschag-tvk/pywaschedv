@@ -1,5 +1,5 @@
 from django.contrib import admin
-from wasch.models import WashUser, WashingMachine
+from wasch.models import WashUser, WashingMachine, WashParameters
 
 
 @admin.register(WashUser)
@@ -12,3 +12,8 @@ class WashUserAdmin(admin.ModelAdmin):
 class WashingMachineAdmin(admin.ModelAdmin):
     list_display = ['__str__', 'isAvailable', 'notes']
     ordering = ['number']
+
+
+@admin.register(WashParameters)
+class WashParametersAdmin(admin.ModelAdmin):
+    list_display = ['name', 'value']
