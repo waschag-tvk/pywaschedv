@@ -16,7 +16,7 @@ from chartjs.views.lines import BaseLineChartView
 import django_tables2
 from legacymodels import Users, Termine, Waschmaschinen
 from peewee import OperationalError
-from wasch.models import WashingMachine, Appointment, WashUser
+from wasch.models import WashingMachine, Appointment, WashUser, WashParameters
 from wasch.serializers import AppointmentSerializer
 from wasch import tvkutils
 
@@ -129,7 +129,7 @@ class AppointmentColumn(django_tables2.Column):
             apjson = JSONRenderer().render(appointment_serial.data)
             book_link = reverse('wasch:do_book', args=[apjson])
             return format_html(
-                '<a href="{}">You can book m{} soon!</a>',
+                '<a href="{}?confirm">You can book m{} soon!</a>',
                 book_link, machine.number)
         else:
             return 'Not available'
@@ -167,13 +167,7 @@ def _status_alerts():
 @login_required
 def book(request, appointment=None):
     """Offer appointments for booking"""
-    machines = tuple(WashingMachine.objects.filter(isAvailable=True))
-    table = AppointmentTable([
-        _appointment_table_row(appointment_time, machines, request.user)
-        for appointment_time
-        in Appointment.manager.scheduled_appointment_times()])
     context = {
-        'appointments_table': table,
         'waschAlerts': _status_alerts(),
     }
     if appointment is not None:
@@ -184,8 +178,20 @@ def book(request, appointment=None):
             apval = appointment_serial.validated_data
             context['message'] = 'You can book {} at {} soon!'.format(
                 apval['machine'], apval['time'])
+            if 'confirm' in request.GET:
+                context['washer_time'] = str(apval['time'])
+                context['price'] = '{:.2f} EUR'.format(
+                    int(WashParameters.objects.get_value('price')) / 100.)
+                context['appointment_str'] = appointment
+                return render(request, 'wasch/book-confirm.html', context)
         else:
             context['message'] = 'Something went wrong!'
+    machines = tuple(WashingMachine.objects.filter(isAvailable=True))
+    table = AppointmentTable([
+        _appointment_table_row(appointment_time, machines, request.user)
+        for appointment_time
+        in Appointment.manager.scheduled_appointment_times()])
+    context['appointments_table'] = table
     Appointment.manager.prefetch_bookable(users=(request.user, ))
     return render(request, 'wasch/book.html', context)
 

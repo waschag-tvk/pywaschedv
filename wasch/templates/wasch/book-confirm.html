@@ -1,0 +1,20 @@
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}WaschZoo Booking{% endblock %}
+{% block content %}
+<h1 class="page-header">Booking</h1>
+{% if message %}
+<div class="alert alert-info" role="alert">{{ message }}</div>
+
+{% endif %}
+<h2>Confirm your booking</h2>
+
+<table class="table">
+	<tbody>
+		<tr><th>Washer use time</th><td>{{ washer_time }}</td></tr>
+		<tr><th>Price</th><td>{{ price }}</td></tr>
+	</tbody>
+</table>
+<a href="{% url 'wasch:do_book' appointment_str %}" class="btn btn-primary">Pay and book</a>
+<a href="{% url 'wasch:book' %}" class="btn btn-link">Cancel</a>
+{% endblock %}
