@@ -275,7 +275,17 @@ class AppointmentManager(models.Manager):
     def why_not_bookable(self, time, machine, user):
         """Reason of why an appointment for the machine at this time can
         not be booked by the user. Return None if bookable."""
-        # check whether time is generally bookable
+        if hasattr(self, 'bookable_cache'):
+            why = self.bookable_cache[machine.number]
+            if isinstance(why, int):
+                return why
+            try:
+                why = why[user.username]
+                if isinstance(why, int):
+                    return why
+                return why[time]
+            except KeyError:
+                pass  # just not using cache
         if not machine.isAvailable:
             return 21
         if not user.groups.filter(name='enduser').exists():
@@ -292,6 +302,58 @@ class AppointmentManager(models.Manager):
             return 41
         if time not in self.scheduled_appointment_times():
             return 11
+
+    def prefetch_bookable(self, users, times=None, machines=None):
+        scheduledTimes = self.scheduled_appointment_times()
+        if times is None:
+            times = scheduledTimes
+        if machines is None:
+            machines = WashingMachine.objects.all()
+        # bookable_cache is nested dict over machine, user, time
+        # when a machine is not available, it's not a dict, but just
+        # this value; same for user not active etc.
+        if not hasattr(self, 'bookable_cache'):
+            self.bookable_cache = {}
+        availableMachines = []
+        for machine in machines:
+            if not machine.isAvailable:
+                self.bookable_cache[machine.number] = 21
+            else:
+                self.bookable_cache.setdefault(machine.number, {})
+                availableMachines.append(machine)
+        if not availableMachines:
+            return
+        usersWhoCanBook = []
+        for user in users:
+            why = None
+            if not user.groups.filter(name='enduser').exists():
+                why = 31
+            try:
+                washuser = WashUser.objects.get(pk=user)
+                if not washuser.isActivated:
+                    why = 31
+                elif washuser.remaining_ration < 1:
+                    why = 32
+            except WashUser.DoesNotExist:
+                why = 31
+            if why is not None:
+                for machine in availableMachines:
+                    self.bookable_cache[machine.number][user.username] = why
+            else:
+                usersWhoCanBook.append(user)
+        if not usersWhoCanBook:
+            return
+        for machine in availableMachines:
+            for user in usersWhoCanBook:
+                self.bookable_cache[machine.number].setdefault(
+                    user.username, {})
+                for time in times:
+                    if time not in scheduledTimes:
+                        continue  # not worthy of caching
+                    (
+                        self.bookable_cache[machine.number][user.username]
+                    )[time] = (
+                        41 if self.appointment_exists(time, machine) else None)
 
     def bookable(self, time, machine, user):
         """Return whether an appointment for the machine at this time

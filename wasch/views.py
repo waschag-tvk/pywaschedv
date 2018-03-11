@@ -135,17 +135,6 @@ class AppointmentColumn(django_tables2.Column):
             return 'Not available'
 
 
-# columns won't be generated this way
-# def machine_columns(cls):
-    # for machine in WashingMachine.objects.filter(isAvailable=True):
-        # setattr(
-            # cls, APPOINTMENT_ATTR_TEMPLATE.format(machine.number),
-            # django_tables2.Column(),
-        # )
-    # return cls
-
-
-# @machine_columns
 class AppointmentTable(django_tables2.Table):
     time = django_tables2.Column()
     appointment_m1 = AppointmentColumn()
@@ -156,11 +145,11 @@ class AppointmentTable(django_tables2.Table):
         template = 'django_tables2/bootstrap.html'
 
 
-def _appointment_table_row(time, user):
+def _appointment_table_row(time, machines, user):
     row = {
         'time': time.isoformat(),
     }
-    for machine in WashingMachine.objects.filter(isAvailable=True):
+    for machine in machines:
         row[APPOINTMENT_ATTR_TEMPLATE.format(machine.number)] = (
             time, machine, user,
         )
@@ -178,8 +167,9 @@ def _status_alerts():
 @login_required
 def book(request, appointment=None):
     """Offer appointments for booking"""
+    machines = tuple(WashingMachine.objects.filter(isAvailable=True))
     table = AppointmentTable([
-        _appointment_table_row(appointment_time, request.user)
+        _appointment_table_row(appointment_time, machines, request.user)
         for appointment_time
         in Appointment.manager.scheduled_appointment_times()])
     context = {
@@ -196,6 +186,7 @@ def book(request, appointment=None):
                 apval['machine'], apval['time'])
         else:
             context['message'] = 'Something went wrong!'
+    Appointment.manager.prefetch_bookable(users=(request.user, ))
     return render(request, 'wasch/book.html', context)
 
 
