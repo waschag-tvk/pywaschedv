@@ -133,6 +133,9 @@ class AppointmentColumn(django_tables2.Column):
             return format_html(
                 '<a href="{}?confirm">You can book m{} soon!</a>',
                 book_link, machine.number)
+        elif Appointment.objects.filter(
+                time=time, user=user, machine=machine).exists():
+            return 'You booked this!'
         else:
             return 'Not available'
 
