@@ -14,6 +14,9 @@ urlpatterns = [
     url(r'^logout/$', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
     url(r'^book/$', views.book, name='book'),
     url(r'^book/(?P<appointment>[\w ,"{}:+-]+)/$', views.book, name='do_book'),
+    url(
+        r'^cancel/(?P<cancel_appointment_pk>\d+)/$', views.book,
+        name='do_cancel'),
     url(r'^stats/$', views.stats, name='stats'),
     url(r'^status/$', views.status, name='status'),
     url(r'^setup/$', views.setup, name='setup'),

@@ -138,12 +138,17 @@ class AppointmentColumn(django_tables2.Column):
             apjson = JSONRenderer().render(appointment_serial.data)
             book_link = reverse('wasch:do_book', args=[apjson])
             return format_html(
-                '<a href="{}?confirm">You can book m{} soon!</a>',
+                '<a href="{}?confirm">Book now</a>',
                 book_link, machine.number)
-        elif Appointment.objects.filter(
-                time=time, user=user, machine=machine).exists():
-            return 'You booked this!'
-        else:
+        try:  # if it's my appointment
+            appointment = Appointment.objects.get(
+                time=time, user=user, machine=machine)
+            cancel_link = reverse('wasch:do_cancel', args=[appointment.pk])
+            return format_html(
+                'You booked this! '
+                '<a href="{}" class="btn btn-danger btn-sm">'
+                'Cancel appointment</a>'.format(cancel_link))
+        except Appointment.DoesNotExist:
             return 'Not available'
 
 
@@ -177,7 +182,7 @@ def _status_alerts():
 
 
 @login_required
-def book(request, appointment=None):
+def book(request, appointment=None, cancel_appointment_pk=None):
     """Offer appointments for booking"""
     context = {
         'waschAlerts': _status_alerts(),
@@ -206,6 +211,22 @@ def book(request, appointment=None):
             except PaymentError:
                 context['message'] = 'Payment has failed!'
         else:
+            context['message'] = 'Something went wrong!'
+    elif cancel_appointment_pk is not None:
+        try:
+            appointment = Appointment.objects.get(
+                pk=cancel_appointment_pk, user=request.user)
+            appointment.cancel()
+            context['message'] = (
+                'Appointment for {} at {} has been canceled!'
+                .format(appointment.machine, appointment.time))
+        except PaymentError:
+            context['message'] = 'Payment has failed!'
+        except AppointmentError:
+            context['message'] = (
+                'Appointment for {} at {} can not be canceled!'
+                .format(appointment.machine, appointment.time))
+        except Appointment.DoesNotExist:
             context['message'] = 'Something went wrong!'
     machines = tuple(WashingMachine.objects.filter(isAvailable=True))
     table = AppointmentTable([
