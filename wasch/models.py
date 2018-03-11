@@ -377,13 +377,8 @@ class AppointmentManager(models.Manager):
         except Appointment.DoesNotExist:  # normal case
             appointment = self.create(
                 time=time, machine=machine, user=user, wasUsed=False)
-            price = int(WashParameters.objects.get_value('price'))
-            bonusAllowed = True
-            notes = 'make appointment {}'.format(appointment.reference)
-            service_washuser, _ = WashUser.objects.get_or_create_service_user()
             try:
-                Transaction.objects.pay(
-                    price, user, service_washuser.user, bonusAllowed, notes)
+                appointment.pay()
             except payment.PaymentError:
                 appointment.delete()
                 raise
@@ -401,18 +396,18 @@ class TransactionManager(models.Manager):
         paid = 0
         reference = ''
         if bonusAllowed:
-            method = 'bonus'
-            bonusCoverage = payment.coverage(value, fromUser, method, True)
+            method = WashParameters.objects.get_value('bonus-method')
+            bonusCoverage = payment.coverage(value, fromUser, method)
             if bonusCoverage == value:  # only "all or nothing" implemented
                 paid, reference = payment.pay(
-                    value, fromUser, toUser, method, True, notes)
+                    value, fromUser, toUser, method, notes=notes)
         if paid > 0:
             isBonus = True
         else:
             isBonus = False
             method = WashParameters.objects.get_value('payment-method')
             _, reference = payment.pay(
-                value, fromUser, toUser, method, False, notes)
+                value, fromUser, toUser, method, notes=notes)
         return self.create(
             fromUser=fromUser,
             toUser=toUser,
@@ -478,8 +473,10 @@ class Appointment(models.Model):
     time = models.DateTimeField()
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     machine = models.ForeignKey(WashingMachine)
-    # multiple transactions if bonus portion, refunds etc. exist
+    # multiple transactions if refunds etc. exist
     transactions = models.ManyToManyField(Transaction)
+    refundableTransaction = models.OneToOneField(
+        Transaction, null=True, related_name='refundable_appointment')
     wasUsed = models.BooleanField()
     canceled = models.BooleanField(default=False)
     objects = models.Manager()
@@ -488,22 +485,39 @@ class Appointment(models.Model):
     class Meta:
         db_table = 'appointments'
 
+    def pay(self, bonusAllowed=True):
+        price = int(WashParameters.objects.get_value('price'))
+        notes = 'make appointment {}'.format(self.reference)
+        service_washuser, _ = WashUser.objects.get_or_create_service_user()
+        transaction = Transaction.objects.pay(
+            price, self.user, service_washuser.user, bonusAllowed, notes)
+        self.transactions.add(transaction)
+        self.refundableTransaction = transaction
+
     @transaction.atomic
     def cancel(self):
-        # TODO refund
         if self.wasUsed:
             raise AppointmentError(61, self.time, self.machine, self.user)
+        try:
+            refundableTransaction = Transaction.objects.get(
+                refundable_appointment=self)
+            # may raise payment.PaymentError
+            transaction = Transaction.objects.refund(refundableTransaction)
+            self.transactions.add(transaction)
+            self.refundableTransaction = None
+        except Transaction.DoesNotExist:
+            pass  # nothing to refund
         self.canceled = True
         self.save()
 
     @transaction.atomic
     def rebook(self):
-        # TODO payment
         error_reason = Appointment.manager.why_not_bookable(
             self.time, self.machine, self.user)
         if error_reason is not None:
             raise AppointmentError(
                 error_reason, self.time, self.machine, self.user)
+        self.pay()  # may raise payment.PaymentError
         self.canceled = False
         self.save()
 
@@ -595,6 +609,7 @@ class WashParametersManager(models.Manager):
 class WashParameters(models.Model):
     WASH_PARAM_NAMES = (
         ('payment-method', 'payment method name'),
+        ('bonus-method', 'bonus payment method name'),
         ('price', 'price in EUR Cent to be paid by user per wash'),
         ('ration', 'allowed use per month per user'),
         ('bonus-waschag', 'bonus for waschag members in EUR Cent per month'),

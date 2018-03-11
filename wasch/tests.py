@@ -7,11 +7,12 @@ from django.contrib.auth.models import (
 from wasch.models import (
     Appointment,
     WashUser,
+    WashParameters,
     # not models:
     AppointmentError,
     StatusRights,
 )
-from wasch import tvkutils
+from wasch import tvkutils, payment
 
 
 class WashUserTestCase(TestCase):
@@ -118,8 +119,12 @@ class AppointmentTestCase(TestCase):
                 self.exampleTime, self.exampleMachine, user)
         self.assertEqual(ae.exception.reason, 41)
         appointment.cancel()
+        WashParameters.objects.update_value('bonus-method', 'empty')
         self.assertTrue(Appointment.manager.bookable(
             self.exampleTime, self.exampleMachine, user))
+        with self.assertRaises(payment.PaymentError):
+            Appointment.manager.make_appointment(
+                self.exampleTime, self.exampleMachine, user)
 
     def test_use(self):
         user = User.objects.get(username=self.exampleUserName)

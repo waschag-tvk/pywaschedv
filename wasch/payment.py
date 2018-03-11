@@ -2,7 +2,7 @@ class PaymentError(RuntimeError):
     pass
 
 
-class BonusPayment:
+class InfinitePayment:
     @staticmethod
     def coverage(value, user):
         '''amount that can be paid by user up to the given value'''
@@ -43,32 +43,32 @@ class EmptyPayment:
 
 
 METHODS = {
-    'bonus': BonusPayment(),
+    'infinite': InfinitePayment(),
     'empty': EmptyPayment(),
 }
 
-BONUS_METHOD = METHODS['bonus']
 
-
-def coverage(value, user, method, bonusAllowed=True):
+def coverage(value, user, method, bonusMethod=None):
     remaining = value
     methodP = METHODS[method]
-    if bonusAllowed:
-        remaining -= BONUS_METHOD.coverage(value, user.username)
+    bonusMethodP = METHODS['empty' if bonusMethod is None else bonusMethod]
+    if bonusMethod is not None:
+        remaining -= bonusMethodP.coverage(value, user.username)
     if remaining > 0:
         remaining -= methodP.coverage(value, user.username)
     return value - remaining
 
 
-def pay(value, fromUser, toUser, method, bonusAllowed=True, notes=''):
+def pay(value, fromUser, toUser, method, bonusMethod=None, notes=''):
     remaining = value
     reference = ''
     bonusReference = ''
     methodP = METHODS[method]
-    if bonusAllowed:
-        bonusCoverage = BONUS_METHOD.coverage(value, fromUser.username)
+    bonusMethodP = METHODS['empty' if bonusMethod is None else bonusMethod]
+    if bonusMethod is not None:
+        bonusCoverage = bonusMethodP.coverage(value, fromUser.username)
         if bonusCoverage > 0:
-            bonusCoverage, bonusReference = BONUS_METHOD.pay(
+            bonusCoverage, bonusReference = bonusMethodP.pay(
                 bonusCoverage, fromUser.username, toUser.username, notes)
             remaining -= bonusCoverage
     else:
@@ -78,11 +78,11 @@ def pay(value, fromUser, toUser, method, bonusAllowed=True, notes=''):
             remaining, fromUser.username, toUser.username, notes)
         remaining -= methodCoverage
     else:
-        methodCoverage = bonusCoverage if methodP == BONUS_METHOD else 0
+        methodCoverage = bonusCoverage if methodP == bonusMethodP else 0
     if remaining == 0:
         return methodCoverage, reference  # XXX discarding bonusReference
     if bonusCoverage > 0:
-        BONUS_METHOD.refund(bonusReference)
+        bonusMethodP.refund(bonusReference)
     if methodCoverage > 0:
         methodP.refund(methodCoverage)
     raise PaymentError("Full payment wasn't achieved")

@@ -49,6 +49,7 @@ def set_default_settings():
     WashParameters.objects.bulk_create([
         WashParameters(name=name, value=value) for name, value in (
             ('payment-method', 'empty'),
+            ('bonus-method', 'infinite'),
             ('price', '100'),  # in EUR Cent to be paid by user per wash
             ('ration', '12'),  # allowed use per month per user
             ('bonus-waschag', '1200'),  # in EUR Cent per month
