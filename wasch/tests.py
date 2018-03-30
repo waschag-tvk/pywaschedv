@@ -109,6 +109,7 @@ class AppointmentTestCase(TestCase):
         god, _ = WashUser.objects.get_or_create_god()
         appointment = Appointment.manager.make_appointment(
             self.exampleTime, self.exampleMachine, user)
+        reference = appointment.reference
         self.assertEqual(
             Appointment.manager.why_not_bookable(
                 self.exampleTime, self.exampleMachine, god.user),
@@ -119,6 +120,9 @@ class AppointmentTestCase(TestCase):
                 self.exampleTime, self.exampleMachine, user)
         self.assertEqual(ae.exception.reason, 41)
         appointment.cancel()
+        self.assertEqual(
+            appointment,
+            Appointment.manager.filter_for_reference(reference).get())
         WashParameters.objects.update_value('bonus-method', 'empty')
         self.assertTrue(Appointment.manager.bookable(
             self.exampleTime, self.exampleMachine, user))

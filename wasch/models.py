@@ -468,6 +468,18 @@ def ref_checksum(ref_partial, sup=8):
     return reduce(operator.xor, struct.pack('I', ref_partial)) % sup
 
 
+class AnonymousAppointment:
+    """Helper class for Appointment parameters without user;
+    mainly for AppointmentManager.from_reference"""
+
+    def __init__(self, time, machine):
+        self.time = time
+        self.machine = machine
+
+    def get(self, user):
+        return Appointment(time=self.time, machine=self.machine, user=user)
+
+
 class Appointment(models.Model):
 
     time = models.DateTimeField()
@@ -589,6 +601,8 @@ class Appointment(models.Model):
         time = timezone.make_aware(datetime.datetime.combine(
             WASCH_EPOCH + datetime.timedelta(days=reference),
             time_of_day))
+        if user is None:
+            return AnonymousAppointment(time=time, machine=machine)
         return cls(time=time, machine=machine, user=user)
 
 
