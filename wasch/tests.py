@@ -136,6 +136,9 @@ class AppointmentTestCase(TestCase):
             self.exampleTime, self.exampleMachine, user)
         appointment.use()
         with self.assertRaises(AppointmentError) as ae:
+            appointment.use()
+        self.assertEqual(ae.exception.reason, 61)  # Appointment already used
+        with self.assertRaises(AppointmentError) as ae:
             appointment.rebook()
         self.assertEqual(ae.exception.reason, 41)  # Appointment taken
         with self.assertRaises(AppointmentError) as ae:

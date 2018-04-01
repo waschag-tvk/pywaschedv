@@ -176,7 +176,7 @@ APPOINTMENT_ERROR_REASONS = {
     32: 'Monthly ration of user is used up',
     41: 'Appointment taken',
     51: 'Appointment canceled',  # for use
-    61: 'Appointment already used',  # for cancellation
+    61: 'Appointment already used',  # for use or cancellation
 }
 
 
@@ -545,6 +545,8 @@ class Appointment(models.Model):
             return 31
         if self.canceled:
             return 51
+        if self.wasUsed:
+            return 61
 
     @transaction.atomic
     def use(self):
