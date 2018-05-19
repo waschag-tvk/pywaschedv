@@ -127,7 +127,7 @@ def _use(reference, enteId, user=None):
     return 'OK'
 
 
-ACTIVATE_PERIOD = datetime.timedelta(seconds=150*60)
+ACTIVATE_PERIOD = datetime.timedelta(seconds=15*60)
 # ACTIVATE_PERIOD = datetime.timedelta(days=27)  # XXX easy testing!
 
 
