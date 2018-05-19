@@ -8,7 +8,7 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission
 from wasch.models import (
     Appointment, STATUS_CHOICES, WashingMachine, WashUser, AppointmentError,
 )
@@ -134,12 +134,26 @@ ACTIVATE_PERIOD = datetime.timedelta(seconds=150*60)
 # TODO last appointment
 
 
+class IsAdminOrMineOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in ('GET', 'HEAD', 'OPTIONS'):
+            return True
+        if request.user:
+            if request.user.is_superuser:
+                return True
+            # obj is Appointment
+            if request.user == obj.user:
+                return True
+        return False
+
+
 class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AppointmentSerializer
     parser_classes = (JSONParser,)
     renderer_classes = (JSONRenderer, )
 
-    @detail_route(methods=['POST'], permission_classes=[IsAuthenticated])
+    @detail_route(
+            methods=['POST'], permission_classes=[IsAdminOrMineOrReadOnly])
     def activate(self, request, pk=None):
         allowed_remotes = [
                 '127.0.0.1',
