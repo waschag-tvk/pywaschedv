@@ -131,9 +131,6 @@ ACTIVATE_PERIOD = datetime.timedelta(seconds=15*60)
 # ACTIVATE_PERIOD = datetime.timedelta(days=27)  # XXX easy testing!
 
 
-# TODO last appointment
-
-
 class IsAdminOrMineOrReadOnly(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in ('GET', 'HEAD', 'OPTIONS'):
@@ -210,3 +207,19 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         end = datetime.datetime.now()
         start = end - ACTIVATE_PERIOD
         return Appointment.objects.filter(time__range=(start, end))
+
+    @list_route()
+    def last_used_for_each_machine(self, request):
+        now = datetime.datetime.now()
+        machines = WashingMachine.objects.all()
+        appomts = []
+        for machine in machines:
+            try:
+                appomts.append(
+                        Appointment.objects
+                        .filter(machine=machine, wasUsed=True, time__lt=now)
+                        .latest('time'),
+                        )
+            except Appointment.DoesNotExist:
+                pass
+        return Response(self.get_serializer(appomts, many=True).data)
