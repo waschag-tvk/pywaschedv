@@ -1,8 +1,5 @@
-import json
 import datetime
 import traceback
-from django.shortcuts import render
-from django.http import HttpResponse
 from django.contrib.auth.models import User
 # from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets
@@ -132,13 +129,13 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         reference = pk
         error = _use(reference, enteId)
         print('activated appointment {} from ente {}@{} --> {}'.format(
-            bookingId, enteId, request.META['REMOTE_ADDR'], error))
+            reference, enteId, request.META['REMOTE_ADDR'], error))
         return Response({
             'reference': reference,
             'ente-id': enteId,
             'action': action,
             'error': error,
-            }, status=200 if error=='OK' else 400)
+            }, status=200 if error == 'OK' else 400)
 
     @list_route()
     def legacy_list(self, request):
@@ -148,22 +145,23 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
         # startzeit = (start.hour * 2 + start.minute // 30) // 3
         # aday = datetime.timedelta(days=1)
         termine = Termine.select().where(
-                Termine.datum.between(start.date(), end.date())).execute()
+                Termine.datum.between(start.date(), end.date())
                 # | (
-                    # Termine.datum.between(start.date(), end.date() - aday)
-                    # & Termine.zeit > startzeit
+                #     Termine.datum.between(start.date(), end.date() - aday)
+                #     & Termine.zeit > startzeit
                 # ) | (
-                    # Termine.datum.between(start.date() + aday, end.date())
-                    # & Termine.zeit < endzeit
+                #     Termine.datum.between(start.date() + aday, end.date())
+                #     & Termine.zeit < endzeit
                 # ) | (
-                    # Termine.datum.between(start.date(), end.date())
-                    # & Termine.zeit.between(startzeit, endzeit)
-                # )).execute()
+                #     Termine.datum.between(start.date(), end.date())
+                #     & Termine.zeit.between(startzeit, endzeit)
+                # )
+                ).execute()
         appomts = [appointment_from_legacy(a) for a in termine if (
             (datetime.datetime.combine(
                 a.datum, time_from_legacy_zeit(a.zeit)) < end)
-            and (datetime.datetime.combine(a
-                .datum, time_from_legacy_zeit(a.zeit)) > start))]
+            and (datetime.datetime.combine(
+                a.datum, time_from_legacy_zeit(a.zeit)) > start))]
         return Response(self.get_serializer(appomts, many=True).data)
 
     def get_queryset(self):
