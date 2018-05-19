@@ -5,4 +5,4 @@ from .models import Appointment
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
-        fields = ('time', 'machine')
+        fields = ('pk', 'time', 'machine', 'reference')

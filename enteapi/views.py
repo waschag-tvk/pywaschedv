@@ -1,4 +1,5 @@
 import datetime
+import json
 import traceback
 from django.contrib.auth.models import User
 # from django.views.decorators.csrf import csrf_exempt
@@ -7,18 +8,24 @@ from rest_framework.decorators import detail_route, list_route
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
-from wasch.models import Appointment, STATUS_CHOICES, WashingMachine, WashUser
+from rest_framework.permissions import IsAuthenticated
+from wasch.models import (
+    Appointment, STATUS_CHOICES, WashingMachine, WashUser, AppointmentError,
+)
 from wasch.serializers import AppointmentSerializer
 from legacymodels import (
     Termine, DoesNotExist, Waschmaschinen, Users as LegacyUser,
 )
 
 
-def machine_ready(machineId):
-    '''can throw DoesNotExist if machineId wrong
+def machine_ready(machineId, legacy=False):
+    '''can throw WashingMachine.DoesNotExist if machineId wrong
+    if legacy: legacymodels.DoesNotExist
     '''
-    state = Waschmaschinen.get(Waschmaschinen.id == machineId).status
-    return state == 1
+    if legacy:
+        state = Waschmaschinen.get(Waschmaschinen.id == machineId).status
+        return state == 1
+    return WashingMachine.objects.get(number=machineId).isAvailable
 
 
 def time_from_legacy_zeit(zeit):
@@ -88,24 +95,43 @@ def _legacy_use(reference):
     return 'OK'
 
 
-def _use(reference, enteId):
+def _use(reference, enteId, user=None):
     enten = [
             1,
             ]
     try:
-        r = int(reference, base=16)
-        e = int(enteId, base=16)
+        r = reference  # int(reference, base=16)
+        e = enteId  # int(enteId, base=16)
         if e not in enten:
             return 'UNKNOWN_ENTE'
     except ValueError:
         return 'INVALID_ID'
-    # for legacy appointment reference
-    return _legacy_use(r)
+    if user is not None:
+        try:
+            appointment = Appointment.from_reference(reference, user)
+        except ValueError:  # reference invalid for current system
+            try_legacy = False
+            if try_legacy:
+                # for legacy appointment reference
+                return _legacy_use(r)
+            else:
+                raise
+    try:
+        appointment.use()
+    except AppointmentError as ae:
+        if ae.reason == 21:
+            return 'MACHINE_UNAVAILABLE'
+        elif ae.reason == 61:
+            return 'ALREADY_USED'
+        return 'UNEXPECTED'  # TODO better distinction
     return 'OK'
 
 
-ACTIVATE_PERIOD = datetime.timedelta(seconds=15*60)
+ACTIVATE_PERIOD = datetime.timedelta(seconds=150*60)
 # ACTIVATE_PERIOD = datetime.timedelta(days=27)  # XXX easy testing!
+
+
+# TODO last appointment
 
 
 class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -113,7 +139,7 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
     parser_classes = (JSONParser,)
     renderer_classes = (JSONRenderer, )
 
-    @detail_route(methods=['POST'])
+    @detail_route(methods=['POST'], permission_classes=[IsAuthenticated])
     def activate(self, request, pk=None):
         allowed_remotes = [
                 '127.0.0.1',
@@ -124,10 +150,12 @@ class AppointmentViewSet(viewsets.ReadOnlyModelViewSet):
                 'error': 'remote {} not allowed'.format(remote)
                 }, status=403)
         action = 'activate'
-        reqdata = request.data  # JSON
+        reqdata = request.data
+        if not isinstance(reqdata, dict):
+            reqdata = json.loads(reqdata)
         enteId = reqdata['enteId']
-        reference = pk
-        error = _use(reference, enteId)
+        reference = Appointment.objects.get(pk=pk).reference
+        error = _use(reference, enteId, request.user)
         print('activated appointment {} from ente {}@{} --> {}'.format(
             reference, enteId, request.META['REMOTE_ADDR'], error))
         return Response({
