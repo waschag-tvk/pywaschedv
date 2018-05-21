@@ -1,7 +1,9 @@
-Django==1.8
+Django==1.11
 django-treebeard
 djangorestframework
 PyMySQL
 peewee
 django-chartjs
 django-bootstrap-themes
+django-tables2
+djangorestframework-jwt
