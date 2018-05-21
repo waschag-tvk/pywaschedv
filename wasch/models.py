@@ -322,7 +322,8 @@ class AppointmentManager(models.Manager):
             if not machine.isAvailable:
                 self.bookable_cache[machine.number] = 21
             else:
-                self.bookable_cache.setdefault(machine.number, {})
+                self.bookable_cache[machine.number] = {}
+				# TODO: should setdefault be use then have to first check if entrie in bookable_cache is alrd a dict
                 availableMachines.append(machine)
         if not availableMachines:
             return
