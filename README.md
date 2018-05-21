@@ -6,6 +6,14 @@
  - Activate env using `source env/bin/activate`
  - Install requirements using `pip install -r requirements.txt`
  
+ ### Usage
+ 
+ Like any django project you can start it with
+ 
+ ```
+ python manage.py runserver $SOME_PORT
+ ```
+ 
  ### PyCharm
  I'd also highly recommend using PyCharm, best way to set up (imho ;)) is as follows:
  - Get repository `sudo add-apt-repository ppa:mystic-mirage/pycharm`
