@@ -1,10 +1,48 @@
 # pywaschedv
 
-### Install Instructions
- - Clone repository, and navigate to top level project folder
+## Install Instructions
+
+In all the methods below, you first please clone this repository, and navigate
+to top level project folder.
+
+### Quickest way
+
+Using [pipenv](https://docs.pipenv.org/install/), you just need to run
+`pipenv install`.
+Run Django by `pipenv run python manage.py <options see under "Usage">` or you
+can enter a shell by `pipenv shell` and you don’t need to prefix `pipenv run`.
+
+### Traditional way
+
  - Create virtual environment using `virtualenv env`
  - Activate env using `source env/bin/activate`
  - Install requirements using `pip install -r requirements.txt`
+
+### If you have a very old distribution
+
+If you have something like Debian Wheezy, installing either virtualenv or
+python>=3.5 is not that easy, you can use conda.
+
+ - Install miniconda from [conda.io](https://conda.io/miniconda.html)
+ - Start a new shell (e. g. run `bash`)
+ - Create a conda environment by
+   `conda create -n <some name for your pywaschedv environment> python=3`
+ - Enter the environment with `source activate <the pywaschedv environment name>`
+
+### Alternative way on a very old Debian distribution (deprecated)
+
+This method works, but is rather hacky and not recommended.
+
+ - Create a [pbuilder](https://wiki.ubuntu.com/PbuilderHowto) chroot
+   environment by
+   `cowbuilder --create --distribution stretch --basepath /var/cowdancer/stretch`
+ - Enter the chroot environment by
+   `cowbuilder --login --basepath /var/cowdancer/stretch --bindmounts "$HOME"`
+   The reason for mounting HOME is to access the git repository and created
+   virtualenvs.
+ - Create a user with the same username with `adduser <username>`
+ - Login as user `su - <username>`
+ - Install necessary things for any of the above methods to get started
  
  ### Usage
  
