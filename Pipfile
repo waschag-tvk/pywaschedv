@@ -19,6 +19,7 @@ pymysql = "*"
 django = "==1.11"
 "django-tables2" = "*"
 djangorestframework-jwt = "*"
+requests = "*"
 
 
 [requires]

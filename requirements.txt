@@ -7,3 +7,4 @@ django-chartjs
 django-bootstrap-themes
 django-tables2
 djangorestframework-jwt
+requests
