@@ -94,6 +94,7 @@ DATABASES = {
 
 AUTHENTICATION_BACKENDS = [
     'wasch.auth.GodOnlyBackend',
+    'wasch.auth.KasseBackend',
     'django.contrib.auth.backends.ModelBackend',
 ]
 
@@ -151,3 +152,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     ),
 }
+
+
+# For KasseBackend, please start vereinskassensystem here
+
+KASSE_TOKEN_URL = 'http://localhost:9889/api/get_token/'
