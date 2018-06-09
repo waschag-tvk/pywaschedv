@@ -12,7 +12,8 @@ from wasch.models import (
     AppointmentError,
     StatusRights,
 )
-from wasch import tvkutils, payment
+from wasch import tvkutils, payment, bonuspayment
+from accounts import facade
 
 
 class WashUserTestCase(TestCase):
@@ -145,3 +146,26 @@ class AppointmentTestCase(TestCase):
             appointment.cancel()
         self.assertEqual(ae.exception.reason, 61)  # Appointment already used
         self.assertTrue(appointment.wasUsed)
+
+    def test_bonuspayment(self):
+        bpay = bonuspayment.BonusPayment()
+        bpay._class_init()
+        payment.register_method('bonus', bpay)
+        WashParameters.objects.update_value('bonus-method', 'bonus')
+        user = User.objects.get(username=self.exampleUserName)
+        account = facade.Account.objects.create(
+                primary_user=user, name='{}-bonus'.format(user.username))
+        self.assertEqual(account, bpay.bonus_account_of(user))
+        with self.assertRaises(payment.PaymentError):
+            appointment = Appointment.manager.make_appointment(
+                self.exampleTime, self.exampleMachine, user)
+        price = int(WashParameters.objects.get_value('price'))
+        self.assertFalse(account == bpay.bonus_source)
+        god, _ = WashUser.objects.get_or_create_god()
+        bpay.award_bonus(price, user, authorized_by=god.user)
+        self.assertEqual(price, bpay.coverage(price, user))
+        appointment = Appointment.manager.make_appointment(
+            self.exampleTime, self.exampleMachine, user)
+        self.assertEqual(0, bpay.coverage(price, user))
+        appointment.cancel()
+        self.assertEqual(price, bpay.coverage(price, user))
