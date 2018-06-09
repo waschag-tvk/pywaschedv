@@ -517,6 +517,7 @@ class Appointment(models.Model):
             price, self.user, service_washuser.user, bonusAllowed, notes)
         self.transactions.add(transaction)
         self.refundableTransaction = transaction
+        self.save()
 
     @transaction.atomic
     def cancel(self):
