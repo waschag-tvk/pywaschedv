@@ -53,9 +53,9 @@ def coverage(value, user, method, bonusMethod=None):
     methodP = METHODS[method]
     bonusMethodP = METHODS['empty' if bonusMethod is None else bonusMethod]
     if bonusMethod is not None:
-        remaining -= bonusMethodP.coverage(value, user.username)
+        remaining -= bonusMethodP.coverage(value, user)
     if remaining > 0:
-        remaining -= methodP.coverage(value, user.username)
+        remaining -= methodP.coverage(value, user)
     return value - remaining
 
 
@@ -66,16 +66,16 @@ def pay(value, fromUser, toUser, method, bonusMethod=None, notes=''):
     methodP = METHODS[method]
     bonusMethodP = METHODS['empty' if bonusMethod is None else bonusMethod]
     if bonusMethod is not None:
-        bonusCoverage = bonusMethodP.coverage(value, fromUser.username)
+        bonusCoverage = bonusMethodP.coverage(value, fromUser)
         if bonusCoverage > 0:
             bonusCoverage, bonusReference = bonusMethodP.pay(
-                bonusCoverage, fromUser.username, toUser.username, notes)
+                bonusCoverage, fromUser, toUser, notes)
             remaining -= bonusCoverage
     else:
         bonusCoverage = 0
     if remaining > 0:
         methodCoverage, reference = methodP.pay(
-            remaining, fromUser.username, toUser.username, notes)
+            remaining, fromUser, toUser, notes)
         remaining -= methodCoverage
     else:
         methodCoverage = bonusCoverage if methodP == bonusMethodP else 0
