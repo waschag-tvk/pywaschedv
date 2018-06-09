@@ -48,6 +48,13 @@ METHODS = {
 }
 
 
+def register_method(name, method):
+    payment_interface = ('coverage', 'pay', 'refund')
+    if not all(hasattr(method, attr) for attr in payment_interface):
+        raise RuntimeError('method does not implement Payment interface!')
+    METHODS[name] = method
+
+
 def coverage(value, user, method, bonusMethod=None):
     remaining = value
     methodP = METHODS[method]
