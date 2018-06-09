@@ -20,6 +20,7 @@ django = "==1.11"
 "django-tables2" = "*"
 djangorestframework-jwt = "*"
 requests = "*"
+accounts = {git = "ssh://git@c-tools.tvk.rwth-aachen.de:420/intern/accounts.git", editable = true, ref = "remove-oscar"}
 
 
 [requires]

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'bootstrap_themes',
     'chartjs',
     'django_tables2',
+    'accounts',
     'wasch.apps.WaschConfig',
 ]
 
