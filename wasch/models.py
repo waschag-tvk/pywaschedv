@@ -84,13 +84,24 @@ class WashUserManager(models.Manager):
         return washuser
 
     def get_or_create_god(self):
+        try:
+            self.cached_god.activate()
+            return self.cached_god, False
+        except AttributeError:
+            pass  # expected
         god, was_created, user_was_created = self._get_or_create_with_user(
             GOD_NAME, status=9, isActivated=True)
+        self.cached_god = god
         return god, was_created or user_was_created
 
     def get_or_create_service_user(self):
+        try:
+            return self.cached_service_washuser, False
+        except AttributeError:
+            pass  # expected
         service, was_created, user_was_created = self._get_or_create_with_user(
             SERVICE_USER_NAME, status=5, isActivated=False)
+        self.cached_service_washuser = service
         return service, was_created or user_was_created
 
 
