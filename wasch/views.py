@@ -10,17 +10,20 @@ from django.contrib.auth import (
 )
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.six import BytesIO
+from django.conf import settings
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from chartjs.views.lines import BaseLineChartView
 import django_tables2
-from legacymodels import Users, Termine, Waschmaschinen
-from peewee import OperationalError
 from wasch.models import WashingMachine, Appointment, WashUser, WashParameters
 from wasch.models import AppointmentError  # not models
 from wasch.serializers import AppointmentSerializer
 from wasch import tvkutils
 from wasch.payment import PaymentError
+
+if settings.WASCH_USE_LEGACY:
+    from legacymodels import Users, Termine, Waschmaschinen
+    from peewee import OperationalError
 
 
 def _user_alerts(user):
@@ -75,6 +78,8 @@ def check_login_view(request):
 
 def legacy_method(
         method, retval=HttpResponse('Legacy feature unavailable', status=500)):
+    if not settings.WASCH_USE_LEGACY:
+        return method
     def quiet_method(*args, **kwargs):
         try:
             return method(*args, **kwargs)
@@ -88,8 +93,7 @@ def legacy_method(
 @legacy_method
 def stats(request):
     """Show usage stats"""
-    legacy = False
-    if legacy:
+    if settings.WASCH_USE_LEGACY:
         users_count = len(Users.select(Users.login).execute())
         machines_count = len(
             Waschmaschinen.select(Waschmaschinen.id).execute())
@@ -239,8 +243,7 @@ def book(request, appointment=None, cancel_appointment_pk=None):
 
 
 def _appointments_per_day(day, used=None):
-    legacy = False
-    if legacy:
+    if settings.WASCH_USE_LEGACY:
         query = Termine.select(Termine.datum, Termine.wochentag).where(
             Termine.datum.year == day.year,
             Termine.datum.month == day.month,
@@ -255,8 +258,7 @@ def _appointments_per_day(day, used=None):
 
 
 def _appointments_per_floor(floor, used=None):
-    legacy = False
-    if legacy:
+    if settings.WASCH_USE_LEGACY:
         users = Users.select(Users.id).where(
             Users.zimmer > 100 * floor,
             Users.zimmer < 100 * (floor + 1),
