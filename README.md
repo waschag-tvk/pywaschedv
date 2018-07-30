@@ -43,6 +43,29 @@ This method works, but is rather hacky and not recommended.
  - Create a user with the same username with `adduser <username>`
  - Login as user `su - <username>`
  - Install necessary things for any of the above methods to get started
+
+## Additional setup to be done before use
+
+The repository does not contain all migration files.
+Therefore before first use of your instance, run
+
+```
+python manage.py makemigrations
+python manage.py migrate
+```
+
+Further, quick setup of a waschuser for god and three machines as
+required at TvK you can navigate to
+`http://localhost:$DJANGO_PORT/wasch/setup/`.
+You need to login as superuser (change password for WaschRoss in
+[GodOnlyBackend](wasch/auth.py) as required).
+As GodOnlyBackend depends on crypt, it only works in a POSIX
+environment.
+You can alternatively create a different superuser using `manage.py`.
+This method has not been rigorously tested yet though.
+
+All created machines are initially disabled.
+Enable them as appropriate using the Django admin.
  
  ### Usage
  
