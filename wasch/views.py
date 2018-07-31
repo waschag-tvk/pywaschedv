@@ -19,7 +19,7 @@ from wasch.models import WashingMachine, Appointment, WashUser, WashParameters
 from wasch.models import AppointmentError  # not models
 from wasch.serializers import AppointmentSerializer
 from wasch import tvkutils
-from wasch.payment import PaymentError
+from wasch import payment
 
 if settings.WASCH_USE_LEGACY:
     from legacymodels import Users, Termine, Waschmaschinen
@@ -186,6 +186,19 @@ def _status_alerts():
 
 
 @login_required
+def bonus(request):
+    maximum_display_value = 499  # XXX this is arbitrary
+    method = WashParameters.objects.get_value('bonus-method')
+    display_balance = payment.coverage(
+            maximum_display_value, request.user, method)
+    context = {
+        'balance': display_balance,
+        'currency': 'EUR',
+    }
+    return render(request, 'wasch/bonus.html', context)
+
+
+@login_required
 def book(request, appointment=None, cancel_appointment_pk=None):
     """Offer appointments for booking"""
     context = {
@@ -212,7 +225,7 @@ def book(request, appointment=None, cancel_appointment_pk=None):
                 context['message'] = (
                     'Appointment for {} at {} seems no longer available!'
                     .format(apval['machine'], apval['time']))
-            except PaymentError:
+            except payment.PaymentError:
                 context['message'] = 'Payment has failed!'
         else:
             context['message'] = 'Something went wrong!'
