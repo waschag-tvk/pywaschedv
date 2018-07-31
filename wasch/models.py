@@ -656,3 +656,12 @@ class WashParameters(models.Model):
 
     class Meta:
         db_table = 'washparameters'
+
+
+@receiver(models.signals.pre_save, sender=WashParameters)
+def pre_save_wash_parameters(sender, **kwargs):
+    instance = kwargs['instance']
+    if instance.value == 'bonus' and instance.name in (
+            'payment-method', 'bonus-method'):
+        from wasch.bonuspayment import BonusPayment
+        payment.register_method('bonus', BonusPayment, no_clobber=True)
