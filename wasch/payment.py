@@ -48,7 +48,13 @@ METHODS = {
 }
 
 
-def register_method(name, method):
+def register_method(name, method, no_clobber=False, do_update=True):
+    if name in METHODS:
+        if no_clobber:
+            return
+        elif not do_update:
+            raise RuntimeError(
+                    'method name already in use and do_update set False')
     payment_interface = ('coverage', 'pay', 'refund')
     if not all(hasattr(method, attr) for attr in payment_interface):
         raise RuntimeError('method does not implement Payment interface!')
