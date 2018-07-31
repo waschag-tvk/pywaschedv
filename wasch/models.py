@@ -629,7 +629,11 @@ def post_init_appointment(sender, **kwargs):
 
 class WashParametersManager(models.Manager):
     def get_value(self, name):
-        return self.get(name=name).value
+        value = self.get(name=name).value
+        if value == 'bonus' and name in ('payment-method', 'bonus-method'):
+            from wasch.bonuspayment import BonusPayment
+            payment.register_method('bonus', BonusPayment, no_clobber=True)
+        return value
 
     def update_value(self, name, value):
         return self.filter(name=name).update(value=value)
@@ -664,5 +668,4 @@ def pre_save_wash_parameters(sender, **kwargs):
     if instance.value == 'bonus' and instance.name in (
             'payment-method', 'bonus-method'):
         from wasch.bonuspayment import BonusPayment
-        BonusPayment._class_init()
         payment.register_method('bonus', BonusPayment, no_clobber=True)
