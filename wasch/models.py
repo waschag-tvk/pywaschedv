@@ -664,4 +664,5 @@ def pre_save_wash_parameters(sender, **kwargs):
     if instance.value == 'bonus' and instance.name in (
             'payment-method', 'bonus-method'):
         from wasch.bonuspayment import BonusPayment
+        BonusPayment._class_init()
         payment.register_method('bonus', BonusPayment, no_clobber=True)
