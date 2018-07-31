@@ -148,10 +148,9 @@ class AppointmentTestCase(TestCase):
         self.assertTrue(appointment.wasUsed)
 
     def test_bonuspayment(self):
-        bpay = bonuspayment.BonusPayment()
-        bpay._class_init()
-        payment.register_method('bonus', bpay)
+        bpay = bonuspayment.BonusPayment
         WashParameters.objects.update_value('bonus-method', 'bonus')
+        WashParameters.objects.get(name='bonus-method').save()
         user = User.objects.get(username=self.exampleUserName)
         account = facade.Account.objects.create(
                 primary_user=user, name='{}-bonus'.format(user.username))
