@@ -3,6 +3,7 @@ import json
 import traceback
 from django.contrib.auth.models import User
 # from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from rest_framework import viewsets
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.parsers import JSONParser
@@ -13,16 +14,17 @@ from wasch.models import (
     Appointment, STATUS_CHOICES, WashingMachine, WashUser, AppointmentError,
 )
 from wasch.serializers import AppointmentSerializer
-from legacymodels import (
-    Termine, DoesNotExist, Waschmaschinen, Users as LegacyUser,
-)
+if settings.WASCH_USE_LEGACY:
+    from legacymodels import (
+        Termine, DoesNotExist, Waschmaschinen, Users as LegacyUser,
+    )
 
 
-def machine_ready(machineId, legacy=False):
+def machine_ready(machineId):
     '''can throw WashingMachine.DoesNotExist if machineId wrong
     if legacy: legacymodels.DoesNotExist
     '''
-    if legacy:
+    if settings.WASCH_USE_LEGACY:
         state = Waschmaschinen.get(Waschmaschinen.id == machineId).status
         return state == 1
     return WashingMachine.objects.get(number=machineId).isAvailable
@@ -34,15 +36,15 @@ def time_from_legacy_zeit(zeit):
     return datetime.time(hour, minute)
 
 
-def appointment_from_legacy(Termine):
+def appointment_from_legacy(termine):
     time = datetime.datetime.combine(
-            Termine.datum, time_from_legacy_zeit(Termine.zeit))
+            termine.datum, time_from_legacy_zeit(termine.zeit))
     # time = datetime.datetime(
-    #        Termine.year, Termine.month, Termine.day, hour, minute)
+    #        termine.year, termine.month, termine.day, hour, minute)
     print('Termin found at {}'.format(time))
     # not reading from or writing to django database since id's might be
     # assigned differently
-    legacy_user = LegacyUser.get(LegacyUser.id == Termine.user)
+    legacy_user = LegacyUser.get(LegacyUser.id == termine.user)
     user = WashUser(
         user=User(username=legacy_user.login),
         isActivated=not legacy_user.gesperrt,
@@ -50,9 +52,9 @@ def appointment_from_legacy(Termine):
     status = legacy_user.status
     if any(status == choice for choice, _ in STATUS_CHOICES):
         user.status = status
-    machine = WashingMachine(number=Termine.maschine)
+    machine = WashingMachine(number=termine.maschine)
     appointment = Appointment(time=time, user=user, machine=machine)
-    if Termine.wochentag >= 8:
+    if termine.wochentag >= 8:
         appointment.wasUsed = True
     return appointment
 
@@ -110,7 +112,7 @@ def _use(reference, enteId, user=None):
         try:
             appointment = Appointment.from_reference(reference, user)
         except ValueError:  # reference invalid for current system
-            try_legacy = False
+            try_legacy = False  # settings.WASCH_USE_LEGACY is required
             if try_legacy:
                 # for legacy appointment reference
                 return _legacy_use(r)

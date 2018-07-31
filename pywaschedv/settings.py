@@ -155,6 +155,10 @@ REST_FRAMEWORK = {
 }
 
 
+# connect to legacy waschedv using legacymodels?
+
+WASCH_USE_LEGACY = False
+
 # For KasseBackend, please start vereinskassensystem here
 
 KASSE_TOKEN_URL = 'http://localhost:9889/api/get_token/'
