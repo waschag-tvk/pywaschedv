@@ -38,16 +38,25 @@ class BonusPayment:
     @classmethod
     def award_bonus(cls, value, user, authorized_by=None, notes=''):
         cls._class_init()
+        try:
+            destination = cls.bonus_account_of(user)
+        except facade.Account.DoesNotExist:
+            destination = facade.Account.objects.create(
+                primary_user=user, name='bonus-{}'.format(user.username),
+                credit_limit=None)
         transfer = facade.Transfer.objects.create(
                 source=cls.bonus_source,
-                destination=cls.bonus_account_of(user), amount=value,
+                destination=destination, amount=value,
                 user=authorized_by, description=notes)
         return value, str(transfer.reference)
 
     @classmethod
     def coverage(cls, value, user):
         '''amount that can be paid by user up to the given value'''
-        return min(value, cls.bonus_account_of(user).balance)
+        try:
+            return min(value, cls.bonus_account_of(user).balance)
+        except facade.Account.DoesNotExist:
+            return 0
 
     @classmethod
     def pay(cls, value, fromUser, toUser, notes=''):
