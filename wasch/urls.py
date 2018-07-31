@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^login/$', auth_views.LoginView.as_view(template_name='wasch/login.html'), name='login'),
     # url(r'^login/check/$', views.check_login_view, name='check_login'),
     url(r'^logout/$', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    url(r'^bonus/$', views.bonus, name='bonus'),
     url(r'^book/$', views.book, name='book'),
     url(r'^book/(?P<appointment>[\w ,"{}:+-]+)/$', views.book, name='do_book'),
     url(

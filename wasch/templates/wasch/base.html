@@ -17,6 +17,7 @@
 	<li><a href="{% url 'wasch:stats' %}">Stats</a></li>
 	<li><a href="{% url 'wasch:status' %}">Status</a></li>
 	{% if not user.is_anonymous %}
+	<li><a href="{% url 'wasch:bonus' %}">WaschBonus</a></li>
 	<li><a href="{% url 'wasch:logout' %}">Logout</a></li>
 	{% endif %}
       </ul>
