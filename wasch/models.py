@@ -509,14 +509,15 @@ class Appointment(models.Model):
     class Meta:
         db_table = 'appointments'
 
-    def pay(self, bonusAllowed=True):
+    def pay(self, bonusAllowed=True, refundable=True):
         price = int(WashParameters.objects.get_value('price'))
         notes = 'make appointment {}'.format(self.reference)
         service_washuser, _ = WashUser.objects.get_or_create_service_user()
         transaction = Transaction.objects.pay(
             price, self.user, service_washuser.user, bonusAllowed, notes)
         self.transactions.add(transaction)
-        self.refundableTransaction = transaction
+        if refundable:
+            self.refundableTransaction = transaction
         self.save()
 
     @transaction.atomic
@@ -536,13 +537,13 @@ class Appointment(models.Model):
         self.save()
 
     @transaction.atomic
-    def rebook(self):
+    def rebook(self, refundable=True):
         error_reason = Appointment.manager.why_not_bookable(
             self.time, self.machine, self.user)
         if error_reason is not None:
             raise AppointmentError(
                 error_reason, self.time, self.machine, self.user)
-        self.pay()  # may raise payment.PaymentError
+        self.pay(refundable=refundable)  # may raise payment.PaymentError
         self.canceled = False
         self.save()
 
