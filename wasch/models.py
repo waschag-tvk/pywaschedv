@@ -633,7 +633,7 @@ class WashParametersManager(models.Manager):
         value = self.get(name=name).value
         if value == 'bonus' and name in ('payment-method', 'bonus-method'):
             from wasch.bonuspayment import BonusPayment
-            payment.register_method('bonus', BonusPayment, no_clobber=True)
+            payment.register_method('bonus', BonusPayment(), no_clobber=True)
         return value
 
     def update_value(self, name, value):

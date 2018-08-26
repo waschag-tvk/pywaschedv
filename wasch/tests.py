@@ -148,7 +148,7 @@ class AppointmentTestCase(TestCase):
         self.assertTrue(appointment.wasUsed)
 
     def test_bonuspayment(self):
-        bpay = bonuspayment.BonusPayment
+        bpay = bonuspayment.BonusPayment()
         WashParameters.objects.update_value('bonus-method', 'bonus')
         WashParameters.objects.get(name='bonus-method').save()
         user = User.objects.get(username=self.exampleUserName)

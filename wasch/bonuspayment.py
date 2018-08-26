@@ -29,6 +29,11 @@ class BonusPayment:
             cls.bonus_source = _get_bonus_source()
             cls.bonus_sink = _get_bonus_sink()
 
+    def __getattr__(self, name):
+        if name in ('bonus_source', 'bonus_sink'):
+            self._class_init()
+        return self.__getattribute__(name)
+
     @staticmethod
     def bonus_account_of(user):
         return facade.Account.objects.exclude(
