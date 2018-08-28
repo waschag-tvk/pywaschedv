@@ -187,7 +187,7 @@ APPOINTMENT_ERROR_REASONS = {
     32: 'Monthly ration of user is used up',
     41: 'Appointment taken',
     51: 'Appointment canceled',  # for use
-    61: 'Appointment already used',  # for use or cancellation
+    61: 'Appointment already used',  # for use, refund or cancellation
 }
 
 
@@ -521,18 +521,30 @@ class Appointment(models.Model):
         self.save()
 
     @transaction.atomic
-    def cancel(self):
-        if self.wasUsed:
-            raise AppointmentError(61, self.time, self.machine, self.user)
+    def disable_refund(self):
+        transaction = self.refundableTransaction
+        if transaction is None:
+            return  # nothing to do
+        self.transactions.add(transaction)
+        self.refundableTransaction = None
+        self.save()
+
+    @transaction.atomic
+    def refund(self):
         try:
             refundableTransaction = Transaction.objects.get(
                 refundable_appointment=self)
             # may raise payment.PaymentError
-            transaction = Transaction.objects.refund(refundableTransaction)
-            self.transactions.add(transaction)
-            self.refundableTransaction = None
+            Transaction.objects.refund(refundableTransaction)
+            self.disable_refund()
         except Transaction.DoesNotExist:
-            pass  # nothing to refund
+            # nothing to refund
+            if self.wasUsed:
+                raise AppointmentError(61, self.time, self.machine, self.user)
+
+    @transaction.atomic
+    def cancel(self):
+        self.refund()
         self.canceled = True
         self.save()
 
