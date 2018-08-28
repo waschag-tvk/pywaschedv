@@ -171,3 +171,21 @@ class AppointmentTestCase(TestCase):
         self.assertEqual(0, bpay.coverage(price, user))
         appointment.cancel()
         self.assertEqual(price, bpay.coverage(price, user))
+
+    def test_auto_refund(self):
+        user = User.objects.get(username=self.exampleUserName)
+        appmt1 = Appointment.manager.make_appointment(
+            self.exampleTime, self.exampleMachine, user)
+        appmt3 = Appointment.manager.make_appointment(
+            self.exampleTime, self.lastMachine, user)
+        self.assertIsNotNone(appmt1.refundableTransaction)
+        self.assertIsNotNone(appmt3.refundableTransaction)
+        appmt1refundableTransaction = appmt1.refundableTransaction
+        appmt3.use()
+        Appointment.manager.auto_refund_all()
+        # self.assertIsNone(appmt1.refundableTransaction)
+        self.assertTrue(
+                appmt1.transactions.filter(
+                    pk=appmt1refundableTransaction.pk
+                    ).exists())
+        self.assertIsNone(appmt3.refundableTransaction)
