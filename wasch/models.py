@@ -396,6 +396,18 @@ class AppointmentManager(models.Manager):
                 raise
             return appointment
 
+    def auto_refundable(self):
+        return self.filter(
+                refundableTransaction__isnull=False,
+                wasUsed=False,
+                time__lt=datetime.datetime.now()
+                )
+
+    @transaction.atomic
+    def auto_refund_all(self):
+        for appointment in self.auto_refundable():
+            appointment.refund()
+
 
 GOD_RATION = 31 * AppointmentManager.appointments_per_day
 
