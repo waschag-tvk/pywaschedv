@@ -581,6 +581,7 @@ class Appointment(models.Model):
             raise AppointmentError(
                 error_reason, self.time, self.machine, self.user)
         self.wasUsed = True
+        self.disable_refund()
         self.save()
 
     @property
