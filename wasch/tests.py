@@ -48,11 +48,12 @@ class AppointmentTestCase(TestCase):
         WashUser.objects.create_enduser(
             self.examplePoorUserName, isActivated=False)
 
-    def _createExample(self):
+    def _createExample(self, machine=None, wasUsed=False):
         user = User.objects.get(username=self.exampleUserName)
+        if machine is None:
+            machine = self.exampleMachine
         return Appointment.objects.create(
-            time=self.exampleTime, machine=self.exampleMachine, user=user,
-            wasUsed=False)
+            time=self.exampleTime, machine=machine, user=user, wasUsed=wasUsed)
 
     def test_create(self):
         result = self._createExample()
