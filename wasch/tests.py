@@ -38,10 +38,12 @@ class AppointmentTestCase(TestCase):
 
     def setUp(self):
         tvkutils.setup()
-        self.exampleMachine.isAvailable = True  # though this is default
+        self.exampleMachine.isAvailable = True
         self.exampleMachine.save()
-        self.exampleBrokenMachine.isAvailable = False
+        self.exampleBrokenMachine.isAvailable = False  # though this is default
         self.exampleMachine.save()
+        self.lastMachine.isAvailable = True
+        self.lastMachine.save()
         WashUser.objects.create_enduser(self.exampleUserName, isActivated=True)
         WashUser.objects.create_enduser(
             self.examplePoorUserName, isActivated=False)
