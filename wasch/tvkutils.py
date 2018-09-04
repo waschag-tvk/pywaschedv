@@ -57,6 +57,8 @@ def set_default_settings():
             ('retention-time', '100'),  # keep user data; in days
             ('retention-time-waschag', '250'),  # keep waschag user data
             ('cancel-period', '5'),  # this many minutes prior to appointment
+            ('check-in-period', '15'),
+            # allowed minutes since begin of appointment to check in
         )
     ])
 

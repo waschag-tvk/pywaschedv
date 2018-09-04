@@ -678,6 +678,10 @@ class WashParameters(models.Model):
             'cancel-period',
             'minimum minutes prior to appointment to allow cancellation'
         ),
+        (
+            'check-in-period',
+            'allowed minutes since begin of appointment to check in'
+        ),
     )
     name = models.CharField(
         max_length=20, choices=WASH_PARAM_NAMES, unique=True)
