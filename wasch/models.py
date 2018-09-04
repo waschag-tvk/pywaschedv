@@ -397,10 +397,18 @@ class AppointmentManager(models.Manager):
             return appointment
 
     def auto_refundable(self):
+        try:
+            checkinPeriod = datetime.timedelta(
+                    minutes=int(
+                        WashParameters.objects.get_value('check-in-period'))
+                    )
+            latestRefundable = datetime.datetime.now() - checkinPeriod
+        except WashParameters.DoesNotExist:
+            latestRefundable = datetime.datetime.now()
         return self.filter(
                 refundableTransaction__isnull=False,
                 wasUsed=False,
-                time__lt=datetime.datetime.now()
+                time__lt=latestRefundable
                 )
 
     @transaction.atomic
