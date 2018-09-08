@@ -1,0 +1,9 @@
+{% extends 'wasch/base.html' %}
+{% load staticfiles %}
+{% block title %}Pywaschedv Index{% endblock %}
+{% block content %}
+<h1 class="page-header">My WaschBonus</h1>
+<p>Name: {{ user.first_name }} {{ user.last_name }}</p>
+<p>Username: {{ user.username }}</p>
+<p>WaschBonus balance: {{ balance }} {{ currency }}
+{% endblock %}
