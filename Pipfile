@@ -21,8 +21,7 @@ django = "==1.11"
 djangorestframework-jwt = "*"
 requests = "*"
 accounts = {git = "ssh://git@c-tools.tvk.rwth-aachen.de:420/intern/accounts.git", editable = true, ref = "custom-django2"}
-
+django-q = "*"
 
 [requires]
-
 python_version = "3.5"
