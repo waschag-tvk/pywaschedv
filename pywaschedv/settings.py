@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'chartjs',
     'django_tables2',
     'accounts',
+    'django_q',
     'wasch.apps.WaschConfig',
 ]
 
@@ -152,6 +153,17 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ),
+}
+
+
+# Django Q ORM broker connection
+
+Q_CLUSTER = {
+    'name': 'DjangORM',
+    'orm': 'default',
+    'sync': True,  # Windows doesnt support forking,
+    # see https://django-q.readthedocs.io/en/latest/install.html#windows
+    'catch_up': False,  # periodical tasks can be safely skipped
 }
 
 
